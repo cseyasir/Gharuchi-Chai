@@ -1,15 +1,15 @@
 import React from "react";
 import "./header.css";
-
+import { Link } from "react-router-dom";
 export default function Header() {
   return (
     <nav className="navbar navbar-expand-lg custom-navbar px-4 px-lg-5">
 
       {/* LOGO */}
-      <a href="#" className="navbar-brand d-flex align-items-center">
+      <Link to="/" className="navbar-brand d-flex align-items-center">
         <span className="logo-icon">🍴</span>
         <h1 className="m-0 logo-text">GaruhChai</h1>
-      </a>
+     </Link>
 
       {/* TOGGLER */}
       <button
@@ -24,29 +24,29 @@ export default function Header() {
       <div className="collapse navbar-collapse" id="navbarCollapse">
         <div className="navbar-nav ms-auto py-0 pe-4 nav-center">
 
-          <a href="#" className="nav-item nav-link">Home</a>
-          <a href="#" className="nav-item nav-link active">About</a>
-          <a href="#" className="nav-item nav-link">Service</a>
-          <a href="#" className="nav-item nav-link">Menu</a>
+          <Link to="/"className="nav-item nav-link">Home</Link>
+          <Link to="/"className="nav-item nav-link active">About</Link>
+          <Link to="/"className="nav-item nav-link">Service</Link>
+          <Link to="/"className="nav-item nav-link">Menu</Link>
 
           <div className="nav-item dropdown">
-            <a href="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+            <Link to="/"className="nav-link dropdown-toggle" data-bs-toggle="dropdown">
               Pages
-            </a>
+           </Link>
             <div className="dropdown-menu">
-              <a href="#" className="dropdown-item">Booking</a>
-              <a href="#" className="dropdown-item">Team</a>
-              <a href="#" className="dropdown-item">Testimonial</a>
+              <Link to="/"className="dropdown-item">Booking</Link>
+              <Link to="/"className="dropdown-item">Team</Link>
+              <Link to="/"className="dropdown-item">Testimonial</Link>
             </div>
           </div>
 
-          <a href="#" className="nav-item nav-link">Contact</a>
+          <Link to="/"className="nav-item nav-link">Contact</Link>
         </div>
 
         {/* BUTTON */}
-        <a href="#" className="btn btn-warning px-4 py-2 ms-lg-3 book-btn">
+        <Link to="/"className="btn btn-warning px-4 py-2 ms-lg-3 book-btn">
           Book Our Service
-        </a>
+       </Link>
       </div>
 
     </nav>
