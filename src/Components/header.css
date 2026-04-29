@@ -1,0 +1,40 @@
+/* NAVBAR BACKGROUND */
+.custom-navbar {
+  background: #0f172b; /* dark blue like your template */
+}
+
+/* LOGO */
+.logo-text {
+  color: #fea116;
+  font-weight: 700;
+}
+
+.logo-icon {
+  font-size: 26px;
+  margin-right: 8px;
+}
+
+/* MENU LINKS */
+.navbar-nav .nav-link {
+  color: #ffffff;
+  margin: 0 10px;
+  font-weight: 500;
+}
+
+.navbar-nav .nav-link.active,
+.navbar-nav .nav-link:hover {
+  color: #fea116;
+}
+
+/* BUTTON */
+.book-btn {
+  background: #fea116;
+  color: white;
+  border: none;
+  font-weight: 500;
+}
+
+.book-btn:hover {
+  background: #e69500;
+  color: white;
+}

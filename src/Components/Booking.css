@@ -1,0 +1,747 @@
+/* BOOKING PAGE */
+.booking-page {
+  padding-bottom: 220px;
+}
+
+.booking-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.booking-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
+.booking-subtitle {
+  margin: 0 0 8px;
+  color: #6b6b6b;
+  letter-spacing: 0.2px;
+}
+
+.booking-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.booking-input {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid #e7e7e7;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.04);
+  padding: 14px 18px;
+}
+
+.category-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.category-tab {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 138, 34, 0.22);
+  background: #ffffff;
+  color: #d35400;
+  padding: 18px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: grid;
+  grid-template-columns: 48px auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 82px;
+  text-align: left;
+}
+
+.category-tab.active {
+  background: linear-gradient(135deg, #ff7a00, #ffad5d);
+  color: #ffffff;
+  box-shadow: 0 18px 40px rgba(255, 106, 0, 0.18);
+  border-color: transparent;
+}
+
+.category-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  background: rgba(255, 138, 34, 0.1);
+  color: #ff7a00;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 34, 0.12);
+}
+
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 106, 0, 0.1);
+  color: #ff6a00;
+  font-size: 0.95rem;
+}
+
+.empty-state {
+  border: 1px solid #ffe6d3;
+  background: #fff4ec;
+  color: #a45c2a;
+  padding: 18px 20px;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.food-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.food-card {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 26px;
+  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.food-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 18px;
+}
+
+.food-card-details {
+  flex: 1;
+}
+
+.food-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 65px rgba(17, 17, 17, 0.12);
+}
+
+.food-card h6 {
+  margin: 0 0 6px;
+  font-size: 1.03rem;
+  font-weight: 700;
+  color: #232323;
+}
+
+.food-card small {
+  color: #7b7b7b;
+}
+
+.add-main-btn {
+  min-width: 110px;
+  border: 1px solid #ff8a00;
+  color: #ff8a00;
+  background: #ffffff;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.add-main-btn:hover {
+  background: #ff8a00;
+  color: #ffffff;
+}
+
+.qty-box {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #eaeaea;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.qty-box button {
+  border: none;
+  background: #ff6a00;
+  color: white;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.qty-box button:hover {
+  opacity: 0.9;
+}
+
+.qty-box span {
+  min-width: 34px;
+  text-align: center;
+  font-weight: 700;
+  color: #232323;
+}
+
+.cart-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(96%, 760px);
+  background: linear-gradient(135deg, #ff7a00, #ffaa45);
+  color: white;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(255, 106, 0, 0.2);
+  gap: 14px;
+  z-index: 999;
+}
+
+@media (max-width: 768px) {
+  .cart-bar {
+    width: calc(100% - 32px);
+    left: 16px;
+    right: 16px;
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+}
+
+.cart-bar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cart-bar .small {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.92rem;
+}
+
+.cart-bar .btn {
+  min-width: 146px;
+  border: none;
+  background: white;
+  color: #ff6a00;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 999px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.cart-bar .btn:hover {
+  background: #fff4ea;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-box-pro {
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 28px;
+  width: min(96%, 520px);
+  max-width: 520px;
+  box-shadow: 0 30px 75px rgba(0, 0, 0, 0.12);
+  position: relative;
+}
+
+.bill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.bill-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bill-header h4 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #2c2c2c;
+}
+
+.bill-badge {
+  background: #eaf9f0;
+  color: #10703f;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bill-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.bill-info p {
+  font-size: 0.95rem;
+  background: #fff7ef;
+  border: 1px solid #ffe5d2;
+  padding: 14px 16px;
+  border-radius: 16px;
+  margin: 0;
+  color: #3a3a3a;
+}
+
+.bill-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+}
+
+.bill-table th,
+.bill-table td {
+  padding: 12px 10px;
+  font-size: 0.95rem;
+}
+
+.bill-table th {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #7b7b7b;
+  font-weight: 700;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.bill-table td {
+  color: #242424;
+  border-bottom: 1px solid #f7f7f7;
+}
+
+.bill-total {
+  font-weight: 700;
+  font-size: 1.05rem;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  margin-bottom: 14px;
+}
+
+.bill-footer {
+  font-size: 0.93rem;
+  color: #7a7a7a;
+}
+
+.bill-success-box {
+  background: linear-gradient(120deg, #e6fbf0 0%, #f5fff8 100%);
+  border: 1px solid #b7ebc5;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(16, 113, 70, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.bill-success-title {
+  font-weight: 800;
+  color: #116530;
+  font-size: 1rem;
+}
+
+.bill-success-text {
+  color: #2a6f3d;
+  font-size: 0.96rem;
+  margin-top: 8px;
+}
+
+.success-animated {
+  position: relative;
+  overflow: hidden;
+}
+
+.balloons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.balloon {
+  position: absolute;
+  font-size: 24px;
+  opacity: 0;
+  animation-name: floatUp;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+}
+
+.balloon-1 {
+  left: 8%;
+  top: 65%;
+  animation-duration: 3.8s;
+}
+
+.balloon-2 {
+  left: 28%;
+  top: 70%;
+  animation-duration: 4.4s;
+  animation-delay: 0.4s;
+}
+
+.balloon-3 {
+  left: 52%;
+  top: 72%;
+  animation-duration: 3.6s;
+  animation-delay: 0.2s;
+}
+
+.balloon-4 {
+  left: 75%;
+  top: 68%;
+  animation-duration: 4.8s;
+  animation-delay: 0.1s;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.9);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-130px) scale(1.05);
+    opacity: 0;
+  }
+}
+
+/* CLOSE */
+.close-btn {
+  border: none;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* ANIMATION */
+@keyframes slideUp {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+/* MODAL */
+.modal-box-pro {
+  background: #fff;
+  width: 95%;
+  max-width: 420px;
+  border-radius: 14px;
+  padding: 20px;
+  animation: slideUp 0.3s ease;
+}
+
+/* HEADER */
+.bill-header {
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+.bill-header h4 {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* INFO */
+.bill-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* TABLE */
+.bill-table th {
+  font-size: 13px;
+}
+
+.bill-table td {
+  font-size: 14px;
+}
+
+/* TOTAL */
+.bill-total {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+/* NOTE */
+.bill-note {
+  text-align: center;
+  font-size: 12px;
+  color: gray;
+  margin: 10px 0;
+}
+/* CONTAINER */
+.qty-container {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 30px;
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+/* BUTTON BASE */
+.qty-btn {
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* MINUS */
+.qty-btn.minus {
+  background: #ffe5e5;
+  color: #dc3545;
+}
+
+.qty-btn.minus:hover {
+  background: #dc3545;
+  color: white;
+}
+
+/* PLUS */
+.qty-btn.plus {
+  background: #e6f9ec;
+  color: #28a745;
+}
+
+.qty-btn.plus:hover {
+  background: #28a745;
+  color: white;
+}
+
+/* VALUE */
+.qty-value {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+.food-card {
+  background: #fff;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.add-main-btn {
+  border: 1px solid #28a745;
+  color: #28a745;
+  background: #fff;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.qty-box {
+  display: flex;
+  align-items: center;
+  background: #28a745;
+  color: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qty-box button {
+  border: none;
+  background: transparent;
+  color: white;
+  width: 32px;
+  height: 32px;
+}
+
+.qty-box span {
+  min-width: 25px;
+  text-align: center;
+}
+
+.cart-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1c1c1c;
+  color: white;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box-pro {
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f0 100%);
+  padding: 24px;
+  border-radius: 18px;
+  width: 92%;
+  max-width: 460px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+.bill-header h4 {
+  font-weight: 800;
+  color: #ff6a00;
+}
+
+.bill-info p {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.bill-total {
+  font-weight: 700;
+  font-size: 20px;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px dashed #ffae80;
+}
+
+.bill-footer {
+  font-size: 12px;
+  color: #666;
+}
+
+.bill-success-box {
+  background: linear-gradient(120deg, #e9f9ee 0%, #f9fff5 100%);
+  border: 1px solid #95d2a8;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(38, 125, 60, 0.12);
+}
+.bill-success-title {
+  font-weight: 800;
+  color: #116530;
+  font-size: 16px;
+}
+.bill-success-text {
+  color: #2a6f3d;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.success-animated {
+  position: relative;
+  overflow: hidden;
+}
+
+.balloons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.balloon {
+  position: absolute;
+  font-size: 24px;
+  opacity: 0;
+  animation-name: floatUp;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in;
+}
+
+.balloon-1 {
+  left: 8%;
+  animation-duration: 3.8s;
+}
+
+.balloon-2 {
+  left: 28%;
+  animation-duration: 4.4s;
+  animation-delay: 0.4s;
+}
+
+.balloon-3 {
+  left: 52%;
+  animation-duration: 3.6s;
+  animation-delay: 0.2s;
+}
+
+.balloon-4 {
+  left: 75%;
+  animation-duration: 4.8s;
+  animation-delay: 0.1s;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-110px) scale(1.05);
+    opacity: 0;
+  }
+}
