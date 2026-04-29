@@ -131,6 +131,32 @@
   flex: 1;
 }
 
+.food-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.food-item-image,
+.food-item-fallback {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 14px;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff7ef;
+  box-shadow: 0 6px 18px rgba(255, 138, 34, 0.12);
+}
+
+.food-item-fallback {
+  font-size: 1.1rem;
+}
+
 .food-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 30px 65px rgba(17, 17, 17, 0.12);
@@ -358,6 +384,23 @@
 .bill-footer {
   font-size: 0.93rem;
   color: #7a7a7a;
+  text-align: center;
+}
+
+.cart-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clear-cart-btn {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  background: transparent;
+}
+
+.clear-cart-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .bill-success-box {
@@ -464,61 +507,6 @@
     opacity: 1;
   }
 }
-/* MODAL */
-.modal-box-pro {
-  background: #fff;
-  width: 95%;
-  max-width: 420px;
-  border-radius: 14px;
-  padding: 20px;
-  animation: slideUp 0.3s ease;
-}
-
-/* HEADER */
-.bill-header {
-  text-align: center;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 10px;
-}
-
-.bill-header h4 {
-  margin: 0;
-  font-weight: 700;
-}
-
-/* INFO */
-.bill-info {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-/* TABLE */
-.bill-table th {
-  font-size: 13px;
-}
-
-.bill-table td {
-  font-size: 14px;
-}
-
-/* TOTAL */
-.bill-total {
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px solid #eee;
-  padding-top: 10px;
-  margin-top: 10px;
-}
-
-/* NOTE */
-.bill-note {
-  text-align: center;
-  font-size: 12px;
-  color: gray;
-  margin: 10px 0;
-}
 /* CONTAINER */
 .qty-container {
   display: flex;
@@ -624,124 +612,3 @@
   justify-content: space-between;
 }
 
-/* MODAL */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-box-pro {
-  background: linear-gradient(180deg, #ffffff 0%, #fff8f0 100%);
-  padding: 24px;
-  border-radius: 18px;
-  width: 92%;
-  max-width: 460px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
-}
-.bill-header h4 {
-  font-weight: 800;
-  color: #ff6a00;
-}
-
-.bill-info p {
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.bill-total {
-  font-weight: 700;
-  font-size: 20px;
-  display: flex;
-  justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px dashed #ffae80;
-}
-
-.bill-footer {
-  font-size: 12px;
-  color: #666;
-}
-
-.bill-success-box {
-  background: linear-gradient(120deg, #e9f9ee 0%, #f9fff5 100%);
-  border: 1px solid #95d2a8;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(38, 125, 60, 0.12);
-}
-.bill-success-title {
-  font-weight: 800;
-  color: #116530;
-  font-size: 16px;
-}
-.bill-success-text {
-  color: #2a6f3d;
-  font-size: 14px;
-  margin-top: 8px;
-}
-
-.success-animated {
-  position: relative;
-  overflow: hidden;
-}
-
-.balloons {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.balloon {
-  position: absolute;
-  font-size: 24px;
-  opacity: 0;
-  animation-name: floatUp;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in;
-}
-
-.balloon-1 {
-  left: 8%;
-  animation-duration: 3.8s;
-}
-
-.balloon-2 {
-  left: 28%;
-  animation-duration: 4.4s;
-  animation-delay: 0.4s;
-}
-
-.balloon-3 {
-  left: 52%;
-  animation-duration: 3.6s;
-  animation-delay: 0.2s;
-}
-
-.balloon-4 {
-  left: 75%;
-  animation-duration: 4.8s;
-  animation-delay: 0.1s;
-}
-
-@keyframes floatUp {
-  0% {
-    transform: translateY(0) scale(0.8);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-110px) scale(1.05);
-    opacity: 0;
-  }
-}

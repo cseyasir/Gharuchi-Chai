@@ -13,9 +13,9 @@ export default function Admin() {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [salesData, setSalesData] = useState({});
-  const [newItem, setNewItem] = useState({ name: "", price: "", category: "" });
+  const [newItem, setNewItem] = useState({ name: "", price: "", category: "", image_url: "" });
   const [editingItem, setEditingItem] = useState(null);
-  const [editingValues, setEditingValues] = useState({ name: "", price: "" });
+  const [editingValues, setEditingValues] = useState({ name: "", price: "", image_url: "" });
   const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
@@ -104,6 +104,7 @@ export default function Admin() {
         name: newItem.name.trim(),
         price: priceValue,
         category: newItem.category,
+        image_url: newItem.image_url?.trim() || null,
         is_active: true
       }]);
 
@@ -111,7 +112,7 @@ export default function Admin() {
       console.error("Add menu item failed:", error);
       alert(`Error adding item: ${error.message}`);
     } else {
-      setNewItem({ name: "", price: "", category: "" });
+      setNewItem({ name: "", price: "", category: "", image_url: "" });
       fetchMenuItems();
     }
     setLoading(false);
@@ -119,7 +120,11 @@ export default function Admin() {
 
   const startEditingItem = (item) => {
     setEditingItem(item.id);
-    setEditingValues({ name: item.name, price: item.price.toString() });
+    setEditingValues({
+      name: item.name,
+      price: item.price.toString(),
+      image_url: item.image_url || ""
+    });
   };
 
   const updateMenuItem = async (id, updates) => {
@@ -132,6 +137,11 @@ export default function Admin() {
     if (updates.price !== undefined) {
       const parsedPrice = Number(updates.price);
       if (!Number.isNaN(parsedPrice) && parsedPrice > 0) payload.price = parsedPrice;
+    }
+
+    if (updates.image_url !== undefined) {
+      const trimmedUrl = updates.image_url.trim();
+      payload.image_url = trimmedUrl || null;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -151,7 +161,7 @@ export default function Admin() {
     } else {
       fetchMenuItems();
       setEditingItem(null);
-      setEditingValues({ name: "", price: "" });
+      setEditingValues({ name: "", price: "", image_url: "" });
     }
     setLoading(false);
   };
@@ -517,6 +527,24 @@ export default function Admin() {
                     ))}
                   </select>
                 </div>
+                <div className="col-md-4">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Image URL or data URI"
+                    value={newItem.image_url}
+                    onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
+                  />
+                </div>
+                <div className="col-md-2">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Image URL"
+                    value={newItem.image_url}
+                    onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
+                  />
+                </div>
                 <div className="col-md-2">
                   <button
                     className="btn btn-success w-100"
@@ -545,18 +573,27 @@ export default function Admin() {
                         <div key={item.id} className="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                           <div className="flex-grow-1">
                             {editingItem === item.id ? (
-                              <div className="d-flex gap-2">
+                              <div className="d-flex gap-2 flex-wrap">
                                 <input
                                   type="text"
                                   className="form-control form-control-sm"
+                                  placeholder="Name"
                                   value={editingValues.name}
                                   onChange={(e) => setEditingValues(prev => ({ ...prev, name: e.target.value }))}
                                 />
                                 <input
                                   type="number"
                                   className="form-control form-control-sm"
+                                  placeholder="Price"
                                   value={editingValues.price}
                                   onChange={(e) => setEditingValues(prev => ({ ...prev, price: e.target.value }))}
+                                />
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  placeholder="Image URL or data URI"
+                                  value={editingValues.image_url}
+                                  onChange={(e) => setEditingValues(prev => ({ ...prev, image_url: e.target.value }))}
                                 />
                                 <button
                                   className="btn btn-sm btn-outline-success"
@@ -568,7 +605,7 @@ export default function Admin() {
                                   className="btn btn-sm btn-outline-secondary"
                                   onClick={() => {
                                     setEditingItem(null);
-                                    setEditingValues({ name: "", price: "" });
+                                    setEditingValues({ name: "", price: "", image_url: "" });
                                   }}
                                 >
                                   ✕
@@ -577,6 +614,13 @@ export default function Admin() {
                             ) : (
                               <div>
                                 <strong>{item.name}</strong> - ₹{item.price}
+                                {item.image_url && (
+                                  <div className="text-muted small">
+                                    Image: <a href={item.image_url} target="_blank" rel="noreferrer">link</a>
+                                    <br />
+                                    <img src={item.image_url} alt="preview" style={{ maxWidth: 120, maxHeight: 80, marginTop: 8, display: 'block', borderRadius: 8, objectFit: 'cover' }} />
+                                  </div>
+                                )}
                                 <span className={`badge ms-2 ${item.is_active ? 'bg-success' : 'bg-secondary'}`}>
                                   {item.is_active ? 'Active' : 'Inactive'}
                                 </span>

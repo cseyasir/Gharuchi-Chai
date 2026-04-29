@@ -12,25 +12,25 @@ export default function Booking() {
   const [bill, setBill] = useState(null);
   const resetTimer = useRef(null);
 
-  // 🔥 ICON MAPPING (restore your UI)
+  // IMAGE MAPPING FOR FOOD ITEMS (fallback only)
   const getIcon = (name) => {
-    const icons = {
-      "Nagro Special Tea": "☕",
-      "Noon Chai": "🍵",
-      "Lipton": "☕",
-      "Lemon Tea": "🍋",
-      "Mint Tea": "🌿",
-      "Coffee": "☕",
-      "Burger": "🍔",
-      "Sandwich": "🥪",
-      "Patties": "🥟",
-      "Orange Juice": "🍊",
-      "Mixed Juice": "🥤",
-      "Apple Juice": "🍎",
-      "Pineapple Juice": "🍍",
-      "Tuja (Roaster Meat)": "🍖"
+    const images = {
+      "Nagro Special Tea": "https://img.icons8.com/fluency/48/000000/tea.png",
+      "Noon Chai": "https://img.icons8.com/fluency/48/000000/tea.png",
+      "Lipton": "https://img.icons8.com/fluency/48/000000/tea.png",
+      "Lemon Tea": "https://img.icons8.com/fluency/48/000000/lemon.png",
+      "Mint Tea": "https://img.icons8.com/fluency/48/000000/tea.png",
+      "Coffee": "https://img.icons8.com/fluency/48/000000/coffee-to-go.png",
+      "Burger": "https://img.icons8.com/fluency/48/000000/hamburger.png",
+      "Sandwich": "https://img.icons8.com/fluency/48/000000/sandwich.png",
+      "Patties": "https://img.icons8.com/fluency/48/000000/dumpling.png",
+      "Orange Juice": "https://img.icons8.com/fluency/48/000000/orange-juice.png",
+      "Mixed Juice": "https://img.icons8.com/fluency/48/000000/juice-cup.png",
+      "Apple Juice": "https://img.icons8.com/fluency/48/000000/apple-juice.png",
+      "Pineapple Juice": "https://img.icons8.com/fluency/48/000000/pineapple.png",
+      "Tuja (Roaster Meat)": "https://img.icons8.com/fluency/48/000000/roast-chicken.png"
     };
-    return icons[name] || "🍽️";
+    return images[name] || null;
   };
 
   // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
@@ -143,6 +143,15 @@ export default function Booking() {
 
     setBill(newBill);
     setSaved(false);
+  };
+
+  const clearCart = () => {
+    if (cart.length === 0) return;
+    if (window.confirm("Clear your cart and start again?")) {
+      setCart([]);
+      setBill(null);
+      setSaved(false);
+    }
   };
 
   const cancelBill = () => {
@@ -393,14 +402,22 @@ export default function Booking() {
           <div className="food-card" key={item.id}>
             <div className="food-card-row">
               <div className="food-card-details">
-                <h6>
-                  {getIcon(item.name)} {item.name}
-                </h6>
+                <div className="food-card-title">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.name} className="food-item-image" />
+                  ) : getIcon(item.name) ? (
+                    <img src={getIcon(item.name)} alt={item.name} className="food-item-image" />
+                  ) : (
+                    <span className="food-item-fallback">🍽️</span>
+                  )}
+                  <h6>{item.name}</h6>
+                </div>
                 <small>₹{item.price}</small>
               </div>
 
               {!cartItem ? (
                 <button
+                  type="button"
                   className="add-main-btn"
                   onClick={() => addToCart(item)}
                 >
@@ -408,9 +425,9 @@ export default function Booking() {
                 </button>
               ) : (
                 <div className="qty-box">
-                  <button onClick={() => decreaseItem(item)}>−</button>
+                  <button type="button" onClick={() => decreaseItem(item)}>−</button>
                   <span>{cartItem.qty}</span>
-                  <button onClick={() => increaseItem(item)}>+</button>
+                  <button type="button" onClick={() => increaseItem(item)}>+</button>
                 </div>
               )}
             </div>
@@ -427,9 +444,14 @@ export default function Booking() {
             <div className="small">{cart.length} items</div>
           </div>
 
-          <button onClick={generateBill} className="btn btn-light">
-            Proceed →
-          </button>
+          <div className="cart-actions">
+            <button type="button" className="btn btn-outline-light clear-cart-btn" onClick={clearCart}>
+              Clear
+            </button>
+            <button type="button" onClick={generateBill} className="btn btn-light">
+              Proceed →
+            </button>
+          </div>
         </div>
       )}
 
@@ -504,15 +526,16 @@ export default function Booking() {
             )}
 
             <div className="mt-3 d-flex gap-2">
-              <button className="btn btn-secondary flex-grow-1" onClick={downloadBill}>
+              <button type="button" className="btn btn-secondary flex-grow-1" onClick={downloadBill}>
                 Download PDF
               </button>
-              <button className="btn btn-danger flex-grow-1" onClick={cancelBill}>
+              <button type="button" className="btn btn-danger flex-grow-1" onClick={cancelBill}>
                 {saved ? 'Close' : 'Cancel Order'}
               </button>
             </div>
 
             <button
+              type="button"
               className="btn btn-primary w-100 mt-3"
               onClick={confirmOrder}
               disabled={saved}
