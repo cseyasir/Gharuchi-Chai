@@ -23,7 +23,7 @@ export default function OrderStatus() {
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [lastRefresh, setLastRefresh] = useState(null);
-useEffect(() => {
+
   const getOrderIdFromLocation = () => {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get("orderId")) {
@@ -36,7 +36,7 @@ useEffect(() => {
     return "";
   };
 
-  
+  useEffect(() => {
     setOrderId(getOrderIdFromLocation());
   }, [location.pathname, location.search]);
 
