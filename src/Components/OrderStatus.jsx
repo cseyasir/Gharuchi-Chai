@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
 const statusLabels = {
@@ -18,27 +18,25 @@ const badgeClasses = {
 
 export default function OrderStatus() {
   const location = useLocation();
+  const params = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [lastRefresh, setLastRefresh] = useState(null);
-useEffect(() => {
-  const getOrderIdFromLocation = () => {
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get("orderId")) {
-      return searchParams.get("orderId");
-    }
-    const prefix = "/track/";
-    if (location.pathname.startsWith(prefix)) {
-      return decodeURIComponent(location.pathname.slice(prefix.length));
-    }
-    return "";
-  };
 
-  
+  useEffect(() => {
+    const getOrderIdFromLocation = () => {
+      const searchParams = new URLSearchParams(location.search);
+      if (searchParams.get("orderId")) {
+        return searchParams.get("orderId");
+      }
+      const paramOrderId = params["*"] || "";
+      return paramOrderId ? decodeURIComponent(paramOrderId) : "";
+    };
+
     setOrderId(getOrderIdFromLocation());
-  }, [location.pathname, location.search]);
+  }, [location.search, params]);
 
   useEffect(() => {
     if (!orderId) {
@@ -52,10 +50,33 @@ useEffect(() => {
       setLoading(true);
       setError("");
 
-      const isOrderRef = orderId.toString().startsWith("ORD");
-      let query = supabase.from("orders").select("*, order_items(*)");
-      query = isOrderRef ? query.eq("order_id", orderId) : query.eq("id", Number(orderId));
-      const { data, error } = await query.single();
+      const normalizedId = orderId.trim();
+      const numericId = Number(normalizedId);
+      const isOrderRef = normalizedId.toUpperCase().startsWith("ORD");
+
+      const queryOrder = async (filterById) => {
+        const query = supabase.from("orders").select("*, order_items(*)");
+        return filterById
+          ? query.eq("id", numericId).single()
+          : query.eq("order_id", normalizedId).single();
+      };
+
+      let data = null;
+      let error = null;
+
+      if (isOrderRef) {
+        ({ data, error } = await queryOrder(false));
+        if ((!data || error) && !Number.isNaN(numericId)) {
+          ({ data, error } = await queryOrder(true));
+        }
+      } else if (!Number.isNaN(numericId)) {
+        ({ data, error } = await queryOrder(true));
+        if ((!data || error) && normalizedId !== String(numericId)) {
+          ({ data, error } = await queryOrder(false));
+        }
+      } else {
+        ({ data, error } = await queryOrder(false));
+      }
 
       if (error || !data) {
         setError("Order not found. Please verify the order ID.");
