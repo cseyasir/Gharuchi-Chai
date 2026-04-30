@@ -24,29 +24,15 @@ export default function Header() {
       <div className="collapse navbar-collapse" id="navbarCollapse">
         <div className="navbar-nav ms-auto py-0 pe-4 nav-center">
 
-          <Link to="/"className="nav-item nav-link">Home</Link>
-          <Link to="/"className="nav-item nav-link active">About</Link>
-          <Link to="/"className="nav-item nav-link">Service</Link>
-          <Link to="/"className="nav-item nav-link">Menu</Link>
-
-          <div className="nav-item dropdown">
-            <Link to="/"className="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-              Pages
-           </Link>
-            <div className="dropdown-menu">
-              <Link to="/"className="dropdown-item">Booking</Link>
-              <Link to="/"className="dropdown-item">Team</Link>
-              <Link to="/"className="dropdown-item">Testimonial</Link>
-            </div>
-          </div>
-
-          <Link to="/"className="nav-item nav-link">Contact</Link>
+          <Link to="/" className="nav-item nav-link">Home</Link>
+          <Link to="/menu" className="nav-item nav-link">Menu</Link>
+          <Link to="/contact" className="nav-item nav-link">Contact</Link>
         </div>
 
         {/* BUTTON */}
-        <Link to="/"className="btn btn-warning px-4 py-2 ms-lg-3 book-btn">
+        <Link to="/booking" className="btn btn-warning px-4 py-2 ms-lg-3 book-btn">
           Book Our Service
-       </Link>
+        </Link>
       </div>
 
     </nav>

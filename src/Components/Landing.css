@@ -1,0 +1,96 @@
+.landing-hero {
+  background: linear-gradient(135deg, #151d3a 0%, #293566 55%, #0d1732 100%);
+  min-height: 82vh;
+}
+.hero-copy h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.hero-badge {
+  display: inline-block;
+  background: rgba(254, 161, 22, 0.15);
+  color: #ffca5c;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.hero-btn {
+  min-width: 170px;
+}
+.hero-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 1.75rem;
+}
+.hero-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+.hero-card-body {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 1rem;
+}
+.hero-food-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.hero-food-item:last-child {
+  margin-bottom: 0;
+}
+.hero-card-footer {
+  background: rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 0.9rem 1rem;
+  margin-top: 1rem;
+  color: #dcdfe8;
+}
+.landing-features {
+  background: #fafaff;
+}
+.feature-card {
+  background: #ffffff;
+  border: 1px solid #edf1f7;
+}
+.feature-icon {
+  font-size: 2rem;
+}
+.landing-menu {
+  background: #ffffff;
+}
+.section-header .subtitle {
+  color: #fea116;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.menu-card {
+  background: #f9f8ff;
+  border: none;
+}
+.menu-price {
+  font-weight: 700;
+  color: #fea116;
+  margin-bottom: 0.75rem;
+}
+.landing-cta {
+  background: linear-gradient(135deg, #1b2443, #0f172b);
+}
+.cta-card {
+  background: rgba(15, 23, 43, 0.92);
+}
+@media (max-width: 767px) {
+  .landing-hero {
+    min-height: auto;
+  }
+  .hero-card {
+    margin-top: 2rem;
+  }
+}

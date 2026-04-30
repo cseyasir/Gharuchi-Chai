@@ -1,0 +1,62 @@
+.contact-page {
+  background: #f8f9fb;
+}
+.contact-hero {
+  padding: 4rem 0 2rem;
+}
+.contact-label {
+  display: inline-block;
+  color: #fea116;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.contact-hero h1 {
+  font-size: clamp(2rem, 2.5vw, 3.2rem);
+  margin-bottom: 1rem;
+}
+.contact-subtitle {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.contact-card {
+  background: #ffffff;
+  border: 1px solid #e7eaf3;
+  border-radius: 18px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.contact-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(15, 23, 56, 0.08);
+}
+.contact-card h5 {
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+}
+.contact-card p {
+  color: #4b5563;
+  margin-bottom: 0;
+}
+.contact-form-card,
+.contact-map-card {
+  background: #ffffff;
+  border: 1px solid #e7eaf3;
+}
+.contact-form-card h2,
+.contact-map-card h2 {
+  margin-bottom: 1rem;
+}
+.contact-form-card p,
+.contact-map-card p {
+  color: #6b7280;
+}
+.map-wrapper {
+  min-height: 340px;
+  background: #f3f7ff;
+}
+@media (max-width: 767px) {
+  .contact-hero {
+    padding-top: 3rem;
+  }
+}

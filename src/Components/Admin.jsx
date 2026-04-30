@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import "./Admin.css";
 
@@ -25,6 +26,118 @@ export default function Admin() {
   const [salesFromDate, setSalesFromDate] = useState("");
   const [salesToDate, setSalesToDate] = useState("");
   const LOCAL_ADMIN_KEY = "adminLoggedIn";
+
+  const getOrderStatus = useCallback((order) => {
+    return order?.status ?? order?.order_status ?? 'pending';
+  }, []);
+
+  const getOrderLabel = useCallback((order) => {
+    const status = getOrderStatus(order);
+    if (status === 'in_progress') return 'In Progress';
+    if (status === 'dispatched') return 'Dispatched';
+    if (status === 'completed') return 'Completed';
+    return 'Pending';
+  }, [getOrderStatus]);
+
+  const getOrderBadgeClass = useCallback((order) => {
+    const status = getOrderStatus(order);
+    if (status === 'in_progress') return 'bg-info';
+    if (status === 'dispatched') return 'bg-primary';
+    if (status === 'completed') return 'bg-success';
+    return 'bg-warning';
+  }, [getOrderStatus]);
+
+  // Menu CRUD Operations
+  const fetchMenuItems = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("menu")
+      .select("*")
+      .order("category", { ascending: true });
+
+    if (error) console.error(error);
+    else setMenuItems(data || []);
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (*)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+    } else {
+      setOrders(data || []);
+      setFilteredOrders(data || []);
+      const pendingCount = data?.filter(order => {
+        const status = getOrderStatus(order);
+        return !status || status === 'pending';
+      }).length || 0;
+      setNotificationCount(pendingCount);
+    }
+  }, [getOrderStatus]);
+
+  const fetchSalesData = useCallback(async () => {
+    const { data: ordersData, error: ordersError } = await supabase
+      .from("orders")
+      .select("total, status, created_at");
+
+    if (ordersError) {
+      console.error(ordersError);
+      return;
+    }
+
+    const totalSales = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+    const completedOrders = ordersData?.filter(order => getOrderStatus(order) === 'completed').length || 0;
+    const pendingOrders = ordersData?.filter(order => getOrderStatus(order) === 'pending').length || 0;
+
+    const today = new Date().toDateString();
+    const todaySales = ordersData?.filter(order =>
+      new Date(order.created_at).toDateString() === today &&
+      getOrderStatus(order) === 'completed'
+    ).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+
+    const monthlyTotals = [];
+    const now = new Date();
+    for (let i = 11; i >= 0; i -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = monthDate.toLocaleString("default", { month: "short" });
+      const monthTotal = ordersData?.filter(order => {
+        const date = new Date(order.created_at);
+        return date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth();
+      }).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+      monthlyTotals.push({ label, total: monthTotal });
+    }
+
+    const { data: itemsData, error: itemsError } = await supabase
+      .from("order_items")
+      .select("item_name, qty");
+
+    if (itemsError) {
+      console.error(itemsError);
+    }
+
+    const itemSales = {};
+    itemsData?.forEach(item => {
+      itemSales[item.item_name] = (itemSales[item.item_name] || 0) + item.qty;
+    });
+
+    const popularItems = Object.entries(itemSales)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    setSalesData({
+      totalSales,
+      completedOrders,
+      pendingOrders,
+      todaySales,
+      popularItems,
+      monthlyTotals
+    });
+  }, [getOrderStatus]);
 
   // Require admin session before loading any data
   useEffect(() => {
@@ -53,7 +166,7 @@ export default function Admin() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [nav]);
+  }, [nav, fetchMenuItems, fetchOrders, fetchSalesData]);
 
   useEffect(() => {
     const orderChannel = supabase
@@ -77,18 +190,7 @@ export default function Admin() {
       supabase.removeChannel(orderChannel);
       clearInterval(interval);
     };
-  }, []);
-
-  // Menu CRUD Operations
-  const fetchMenuItems = async () => {
-    const { data, error } = await supabase
-      .from("menu")
-      .select("*")
-      .order("category", { ascending: true });
-
-    if (error) console.error(error);
-    else setMenuItems(data || []);
-  };
+  }, [fetchOrders, fetchSalesData]);
 
   const addMenuItem = async () => {
     const priceValue = Number(newItem.price);
@@ -98,7 +200,7 @@ export default function Admin() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("menu")
       .insert([{
         name: newItem.name.trim(),
@@ -150,7 +252,7 @@ export default function Admin() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("menu")
       .update(payload)
       .eq("id", id);
@@ -193,29 +295,6 @@ export default function Admin() {
   };
 
   // Orders Management
-  const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (*)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error(error);
-    } else {
-      setOrders(data || []);
-      setFilteredOrders(data || []);
-      // Count pending orders for notification
-      const pendingCount = data?.filter(order => {
-        const status = getOrderStatus(order);
-        return !status || status === 'pending';
-      }).length || 0;
-      setNotificationCount(pendingCount);
-    }
-  };
-
   useEffect(() => {
     const filtered = orders.filter(order => {
       const search = orderSearch.trim().toLowerCase();
@@ -240,10 +319,6 @@ export default function Admin() {
       : { column: "id", value: orderId };
   };
 
-  const getOrderStatus = (order) => {
-    return order.status ?? order.order_status ?? 'pending';
-  };
-
   const updateOrderStatus = async (orderId, status) => {
     const filter = getOrderFilter(orderId);
     const { error } = await supabase
@@ -260,64 +335,76 @@ export default function Admin() {
     }
   };
 
-  // Sales Dashboard
-  const fetchSalesData = async () => {
-    // Get total sales
-    const { data: ordersData, error: ordersError } = await supabase
-      .from("orders")
-      .select("total, status, created_at");
+  const printOrderPOS = (order) => {
+    const widthMm = 63.5;
+    const heightMm = 220;
+    const doc = new jsPDF({ unit: "mm", format: [widthMm, heightMm] });
+    const left = 6;
+    let y = 8;
 
-    if (ordersError) {
-      console.error(ordersError);
-      return;
-    }
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("GaruhChai", widthMm / 2, y, { align: "center" });
+    y += 5;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text("Zangulpora Devsar Kulgam", widthMm / 2, y, { align: "center" });
+    y += 5;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("POS Receipt", widthMm / 2, y, { align: "center" });
+    y += 6;
+    doc.setLineWidth(0.3);
+    doc.line(left, y, widthMm - left, y);
+    y += 6;
 
-    // Calculate sales metrics
-    const totalSales = ordersData?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
-    const completedOrders = ordersData?.filter(order => getOrderStatus(order) === 'completed').length || 0;
-    const pendingOrders = ordersData?.filter(order => getOrderStatus(order) === 'pending').length || 0;
+    doc.setFontSize(8);
+    doc.text(`Order: ${order.order_id || order.id}`, left, y);
+    y += 4;
+    doc.text(`Date: ${new Date(order.created_at).toLocaleString()}`, left, y);
+    y += 4;
+    doc.text(`Customer: ${order.customer_name || "-"}`, left, y);
+    y += 4;
+    doc.text(`Phone: ${order.customer_phone || "-"}`, left, y);
+    y += 6;
+    doc.line(left, y, widthMm - left, y);
+    y += 6;
 
-    // Get today's sales
-    const today = new Date().toDateString();
-    const todaySales = ordersData?.filter(order =>
-      new Date(order.created_at).toDateString() === today &&
-      getOrderStatus(order) === 'completed'
-    ).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Item", left, y);
+    doc.text("Qty", widthMm - 30, y);
+    doc.text("Amt", widthMm - left, y, { align: "right" });
+    y += 4;
+    doc.setLineWidth(0.2);
+    doc.line(left, y, widthMm - left, y);
+    y += 5;
 
-    const monthlyTotals = [];
-    const now = new Date();
-    for (let i = 11; i >= 0; i -= 1) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = monthDate.toLocaleString("default", { month: "short" });
-      const monthTotal = ordersData?.filter(order => {
-        const date = new Date(order.created_at);
-        return date.getFullYear() === monthDate.getFullYear() && date.getMonth() === monthDate.getMonth();
-      }).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
-      monthlyTotals.push({ label, total: monthTotal });
-    }
+    doc.setFont("helvetica", "normal");
+    (order.order_items || []).forEach(item => {
+      const itemName = item.item_name || item.name || "Item";
+      const qty = item.qty || 0;
+      const price = item.price || 0;
+      const amount = qty * price;
+      const truncatedName = itemName.length > 18 ? itemName.slice(0, 18) + "..." : itemName;
 
-    // Get popular items
-    const { data: itemsData, error: itemsError } = await supabase
-      .from("order_items")
-      .select("item_name, qty");
-
-    const itemSales = {};
-    itemsData?.forEach(item => {
-      itemSales[item.item_name] = (itemSales[item.item_name] || 0) + item.qty;
+      doc.text(truncatedName, left, y);
+      doc.text(`${qty}`, widthMm - 30, y);
+      doc.text(`Rs ${amount}`, widthMm - left, y, { align: "right" });
+      y += 5;
     });
 
-    const popularItems = Object.entries(itemSales)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5);
+    y += 4;
+    doc.line(left, y, widthMm - left, y);
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total: Rs ${order.total || 0}`, left, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.text("Thank you for your order!", widthMm / 2, y, { align: "center" });
 
-    setSalesData({
-      totalSales,
-      completedOrders,
-      pendingOrders,
-      todaySales,
-      popularItems,
-      monthlyTotals
-    });
+    doc.save(`POS-${order.order_id || order.id}.pdf`);
   };
 
   const clearNotifications = () => {
@@ -618,7 +705,7 @@ export default function Admin() {
                                   <div className="text-muted small">
                                     Image: <a href={item.image_url} target="_blank" rel="noreferrer">link</a>
                                     <br />
-                                    <img src={item.image_url} alt="preview" style={{ maxWidth: 120, maxHeight: 80, marginTop: 8, display: 'block', borderRadius: 8, objectFit: 'cover' }} />
+                                    <img src={item.image_url} alt="preview" style={{ maxWidth: 180, maxHeight: 140, marginTop: 8, display: 'block', borderRadius: 8, objectFit: 'cover' }} />
                                   </div>
                                 )}
                                 <span className={`badge ms-2 ${item.is_active ? 'bg-success' : 'bg-secondary'}`}>
@@ -716,12 +803,8 @@ export default function Admin() {
                 <div className="card">
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <h6 className="mb-0">Order #{order.order_id}</h6>
-                    <span className={`badge ${
-                      getOrderStatus(order) === 'pending' ? 'bg-warning' :
-                      getOrderStatus(order) === 'in_progress' ? 'bg-info' : 'bg-success'
-                    }`}>
-                      {getOrderStatus(order) === 'pending' ? 'Pending' :
-                       getOrderStatus(order) === 'in_progress' ? 'In Progress' : 'Completed'}
+                    <span className={`badge ${getOrderBadgeClass(order)}`}>
+                      {getOrderLabel(order)}
                     </span>
                   </div>
                   <div className="card-body">
@@ -742,16 +825,30 @@ export default function Admin() {
 
                     <div className="btn-group w-100">
                       <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => printOrderPOS(order)}
+                        title="Print POS bill"
+                      >
+                        🖨️ Print
+                      </button>
+                      <button
                         className="btn btn-outline-info"
                         onClick={() => updateOrderStatus(order.id || order.order_id, 'in_progress')}
-                        disabled={getOrderStatus(order) === 'in_progress' || getOrderStatus(order) === 'completed'}
+                        disabled={getOrderStatus(order) !== 'pending'}
                       >
                         In Progress
                       </button>
                       <button
+                        className="btn btn-outline-primary"
+                        onClick={() => updateOrderStatus(order.id || order.order_id, 'dispatched')}
+                        disabled={getOrderStatus(order) !== 'in_progress'}
+                      >
+                        Dispatch
+                      </button>
+                      <button
                         className="btn btn-outline-success"
                         onClick={() => updateOrderStatus(order.id || order.order_id, 'completed')}
-                        disabled={getOrderStatus(order) === 'completed'}
+                        disabled={getOrderStatus(order) === 'completed' || getOrderStatus(order) === 'pending'}
                       >
                         Complete
                       </button>

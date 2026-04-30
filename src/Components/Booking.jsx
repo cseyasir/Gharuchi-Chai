@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import "./Booking.css";
@@ -542,6 +543,15 @@ export default function Booking() {
             >
               {saved ? 'Order Confirmed' : 'Confirm Order'}
             </button>
+
+            {saved && bill?.id && (
+              <div className="mt-3 text-center">
+                <p className="mb-2">Your order is confirmed. Track status with the button below.</p>
+                <Link to={`/track/${encodeURIComponent(bill.id)}`} className="btn btn-outline-primary">
+                  Check Order Status
+                </Link>
+              </div>
+            )}
 
             <div className="bill-footer mt-3 text-center">
               Download the bill or cancel the order if you want to make changes.
