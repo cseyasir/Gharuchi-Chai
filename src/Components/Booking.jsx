@@ -119,10 +119,7 @@ export default function Booking() {
   const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
 
   const generateOrderId = () => {
-    let c = parseInt(localStorage.getItem("orderCounter") || "0") + 1;
-    localStorage.setItem("orderCounter", c);
-    const d = new Date();
-    return `ORD${d.getMonth()+1}${d.getFullYear().toString().slice(-2)}/${c}`;
+    return `TEMP-${Date.now()}`;
   };
 
   const [saved, setSaved] = useState(false);
@@ -317,6 +314,21 @@ export default function Booking() {
         }
       }
 
+      const trackingId = `ORD${order.id}`;
+      const { data: updatedOrder, error: updateError } = await supabase
+        .from("orders")
+        .update({ order_id: trackingId })
+        .eq("id", order.id)
+        .select()
+        .single();
+
+      if (updateError || !updatedOrder) {
+        console.error("Order ID update failed:", updateError);
+        throw updateError || new Error("Order ID assignment failed");
+      }
+
+      order = updatedOrder;
+
       const orderItems = bill.items.map(i => ({
         order_ref: order.id,
         item_name: i.name,
@@ -330,6 +342,12 @@ export default function Booking() {
         throw itemsError;
       }
 
+      const confirmedBill = {
+        ...bill,
+        id: order.order_id || bill.id
+      };
+
+      setBill(confirmedBill);
       setSaved(true);
       setCart([]);
       alert("Order confirmed! Returning to booking page in 10 seconds.");
