@@ -337,59 +337,87 @@ export default function Admin() {
 
   const printOrderPOS = (order) => {
     const widthMm = 63.5;
-    const heightMm = 220;
-    const doc = new jsPDF({ unit: "mm", format: [widthMm, heightMm] });
     const left = 6;
-    let y = 8;
+    const lineHeight = 4.5;
+    const baseTop = 8;
+    let y = baseTop;
+
+    const items = order.order_items || [];
+    const estimatedHeight = baseTop
+      + 5  // title
+      + 5  // address
+      + 6  // subtitle
+      + 6  // divider
+      + 4  // order line
+      + 4  // date line
+      + 4  // customer line
+      + 6  // phone line
+      + 6  // divider
+      + 4  // header row
+      + 5  // header divider
+      + items.length * 5
+      + 4  // item/footer spacing
+      + 6  // total divider
+      + 7  // total line
+      + 9; // footer
+
+    const pageHeight = Math.max(estimatedHeight, 90);
+    const doc = new jsPDF({ unit: "mm", format: [widthMm, pageHeight] });
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("GaruhChai", widthMm / 2, y, { align: "center" });
     y += 5;
+
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.text("Zangulpora Devsar Kulgam", widthMm / 2, y, { align: "center" });
     y += 5;
+
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("POS Receipt", widthMm / 2, y, { align: "center" });
     y += 6;
+
     doc.setLineWidth(0.3);
     doc.line(left, y, widthMm - left, y);
     y += 6;
 
     doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
     doc.text(`Order: ${order.order_id || order.id}`, left, y);
-    y += 4;
+    y += lineHeight;
+
     doc.text(`Date: ${new Date(order.created_at).toLocaleString()}`, left, y);
-    y += 4;
+    y += lineHeight;
+
     doc.text(`Customer: ${order.customer_name || "-"}`, left, y);
-    y += 4;
+    y += lineHeight;
+
     doc.text(`Phone: ${order.customer_phone || "-"}`, left, y);
     y += 6;
+
     doc.line(left, y, widthMm - left, y);
     y += 6;
 
-    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Item", left, y);
     doc.text("Qty", widthMm - 30, y);
     doc.text("Amt", widthMm - left, y, { align: "right" });
-    y += 4;
+    y += lineHeight;
+
     doc.setLineWidth(0.2);
     doc.line(left, y, widthMm - left, y);
     y += 5;
 
     doc.setFont("helvetica", "normal");
-    (order.order_items || []).forEach(item => {
+    items.forEach(item => {
       const itemName = item.item_name || item.name || "Item";
-      const qty = item.qty || 0;
-      const price = item.price || 0;
-      const amount = qty * price;
+      const amount = (item.qty || 0) * (item.price || 0);
       const truncatedName = itemName.length > 18 ? itemName.slice(0, 18) + "..." : itemName;
 
       doc.text(truncatedName, left, y);
-      doc.text(`${qty}`, widthMm - 30, y);
+      doc.text(`${item.qty || 0}`, widthMm - 30, y);
       doc.text(`Rs ${amount}`, widthMm - left, y, { align: "right" });
       y += 5;
     });
@@ -397,9 +425,11 @@ export default function Admin() {
     y += 4;
     doc.line(left, y, widthMm - left, y);
     y += 6;
+
     doc.setFont("helvetica", "bold");
     doc.text(`Total: Rs ${order.total || 0}`, left, y);
     y += 7;
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.text("Thank you for your order!", widthMm / 2, y, { align: "center" });

@@ -118,20 +118,63 @@ export default function Booking() {
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
 
-  const generateOrderId = () => {
-    return `TEMP-${Date.now()}`;
+  const formatMonthlyOrderPrefix = () => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear()).slice(-2);
+    return `${month}${year}`;
+  };
+
+  const buildMonthlyOrderId = (prefix, sequence) => {
+    return `${prefix}${String(sequence).padStart(2, "0")}`;
+  };
+
+  const getNextOrderSequence = async (prefix) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("order_id")
+      .like("order_id", `${prefix}%`)
+      .order("order_id", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Order ID lookup failed:", error);
+      return 1;
+    }
+
+    if (!data || data.length === 0) {
+      return 1;
+    }
+
+    const latest = data[0].order_id || "";
+    const suffix = latest.slice(prefix.length);
+    const parsed = parseInt(suffix, 10);
+    return Number.isNaN(parsed) ? 1 : parsed + 1;
+  };
+
+  const getNextOrderId = async () => {
+    const prefix = formatMonthlyOrderPrefix();
+    const nextSequence = await getNextOrderSequence(prefix);
+    return buildMonthlyOrderId(prefix, nextSequence);
   };
 
   const [saved, setSaved] = useState(false);
 
-  const generateBill = () => {
+  const generateBill = async () => {
     if (!name || !phone || cart.length === 0) {
       alert("Enter name, phone number & select items");
       return;
     }
 
+    let orderId = `TEMP-${Date.now()}`;
+    try {
+      orderId = await getNextOrderId();
+    } catch (error) {
+      console.error("Failed to compute order ID:", error);
+    }
+
     const newBill = {
-      id: generateOrderId(),
+      id: orderId,
       name,
       phone,
       items: cart,
@@ -267,6 +310,36 @@ export default function Booking() {
     doc.save(`GarxechChai-Bill-${bill.id}.pdf`);
   };
 
+  const saveOrderWithRetry = async (payload, retries = 3) => {
+    for (let attempt = 1; attempt <= retries; attempt += 1) {
+      const { data: order, error } = await supabase
+        .from("orders")
+        .insert([payload])
+        .select()
+        .single();
+
+      if (!error && order) {
+        return order;
+      }
+
+      const duplicateError = error?.message?.toLowerCase().includes("duplicate") ||
+        error?.details?.toLowerCase?.()?.includes("duplicate") ||
+        error?.message?.toLowerCase().includes("unique");
+
+      if (!duplicateError || attempt === retries) {
+        throw error || new Error("Order save failed");
+      }
+
+      const nextOrderId = await getNextOrderId();
+      payload.order_id = nextOrderId;
+      if (bill) {
+        setBill(prev => prev ? { ...prev, id: nextOrderId } : prev);
+      }
+    }
+
+    throw new Error("Unable to generate a unique order ID");
+  };
+
   const confirmOrder = async () => {
     if (!bill) return;
 
@@ -281,53 +354,7 @@ export default function Booking() {
     }
 
     try {
-      let { data: order, error } = await supabase
-        .from("orders")
-        .insert([orderPayload])
-        .select()
-        .single();
-
-      if (error || !order) {
-        const unknownField = error?.details?.includes('customer_phone') || error?.message?.includes('customer_phone');
-        if (unknownField) {
-          const retryPayload = {
-            order_id: bill.id,
-            customer_name: bill.name,
-            total: bill.total,
-            status: 'pending'
-          };
-          const { data: retryOrder, error: retryError } = await supabase
-            .from("orders")
-            .insert([retryPayload])
-            .select()
-            .single();
-
-          if (retryError || !retryOrder) {
-            console.error("Retry without phone failed:", retryError);
-            throw retryError || new Error("Order save failed after retry");
-          }
-          alert("Order saved, but customer_phone column is missing in the database. Add it to store phone numbers.");
-          order = retryOrder;
-        } else {
-          console.error("Order save error:", error);
-          throw error || new Error("Order save failed");
-        }
-      }
-
-      const trackingId = `ORD${order.id}`;
-      const { data: updatedOrder, error: updateError } = await supabase
-        .from("orders")
-        .update({ order_id: trackingId })
-        .eq("id", order.id)
-        .select()
-        .single();
-
-      if (updateError || !updatedOrder) {
-        console.error("Order ID update failed:", updateError);
-        throw updateError || new Error("Order ID assignment failed");
-      }
-
-      order = updatedOrder;
+      const order = await saveOrderWithRetry(orderPayload);
 
       const orderItems = bill.items.map(i => ({
         order_ref: order.id,
