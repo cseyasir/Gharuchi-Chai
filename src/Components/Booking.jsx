@@ -158,6 +158,26 @@ export default function Booking() {
     return buildMonthlyOrderId(prefix, nextSequence);
   };
 
+  const getISTTimestamp = () => {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date());
+
+    const values = {};
+    parts.forEach(({ type, value }) => {
+      if (type !== "literal") values[type] = value;
+    });
+
+    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}+05:30`;
+  };
+
   const [saved, setSaved] = useState(false);
 
   const generateBill = async () => {
@@ -179,7 +199,7 @@ export default function Booking() {
       phone,
       items: cart,
       total,
-      date: new Date().toLocaleString()
+      date: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
     };
 
     setBill(newBill);
@@ -347,7 +367,8 @@ export default function Booking() {
       order_id: bill.id,
       customer_name: bill.name,
       total: bill.total,
-      status: 'pending'
+      status: 'pending',
+      created_at: getISTTimestamp()
     };
     if (bill.phone) {
       orderPayload.customer_phone = bill.phone;

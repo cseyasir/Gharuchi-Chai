@@ -9,11 +9,12 @@ export default function Admin() {
   const [session, setSession] = useState(null);
   const [localAdmin, setLocalAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [activeTab, setActiveTab] = useState("menu");
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [menuItems, setMenuItems] = useState([]);
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [salesData, setSalesData] = useState({});
+  const [feedbacks, setFeedbacks] = useState([]);
   const [newItem, setNewItem] = useState({ name: "", price: "", category: "", image_url: "" });
   const [editingItem, setEditingItem] = useState(null);
   const [editingValues, setEditingValues] = useState({ name: "", price: "", image_url: "" });
@@ -23,8 +24,8 @@ export default function Admin() {
   const [orderStartDate, setOrderStartDate] = useState("");
   const [orderEndDate, setOrderEndDate] = useState("");
   const [salesRange, setSalesRange] = useState("3m");
-  const [salesFromDate, setSalesFromDate] = useState("");
-  const [salesToDate, setSalesToDate] = useState("");
+  const salesFromDate = "";
+  const salesToDate = "";
   const LOCAL_ADMIN_KEY = "adminLoggedIn";
 
   const getOrderStatus = useCallback((order) => {
@@ -139,6 +140,20 @@ export default function Admin() {
     });
   }, [getOrderStatus]);
 
+  const fetchFeedbacks = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("feedback")
+      .select("id, name, email, phone, message, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Feedback fetch failed:", error);
+      return;
+    }
+
+    setFeedbacks(data || []);
+  }, []);
+
   // Require admin session before loading any data
   useEffect(() => {
     const init = async () => {
@@ -153,6 +168,7 @@ export default function Admin() {
       await fetchMenuItems();
       await fetchOrders();
       await fetchSalesData();
+      await fetchFeedbacks();
       setCheckingAuth(false);
     };
 
@@ -166,7 +182,7 @@ export default function Admin() {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [nav, fetchMenuItems, fetchOrders, fetchSalesData]);
+  }, [nav, fetchMenuItems, fetchOrders, fetchSalesData, fetchFeedbacks]);
 
   useEffect(() => {
     const orderChannel = supabase
@@ -184,13 +200,14 @@ export default function Admin() {
     const interval = setInterval(() => {
       fetchOrders();
       fetchSalesData();
+      fetchFeedbacks();
     }, 15000);
 
     return () => {
       supabase.removeChannel(orderChannel);
       clearInterval(interval);
     };
-  }, [fetchOrders, fetchSalesData]);
+  }, [fetchOrders, fetchSalesData, fetchFeedbacks]);
 
   const addMenuItem = async () => {
     const priceValue = Number(newItem.price);
@@ -530,6 +547,66 @@ export default function Admin() {
     return data.length ? data : [{ label: 'No data', total: 0 }];
   })();
 
+  const buildLineChart = (data, width = 560, height = 260, padding = 24) => {
+    const values = data.map((point) => point.total);
+    const maxValue = Math.max(...values, 1);
+    const stepX = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+
+    const points = data.map((point, index) => {
+      const x = padding + index * stepX;
+      const y = height - padding - ((point.total / maxValue) * (height - padding * 2));
+      return { x, y, label: point.label, value: point.total };
+    });
+
+    const linePath = points.map((pt, index) => `${index === 0 ? 'M' : 'L'} ${pt.x} ${pt.y}`).join(' ');
+    const areaPath = `${linePath} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z`;
+
+    return { width, height, padding, points, linePath, areaPath, maxValue };
+  };
+
+  const totalMenus = menuItems.length;
+  const totalOrders = orders.length;
+  const uniqueClients = new Set(
+    orders
+      .map(order => order.customer_phone?.toString().trim() || order.customer_name?.trim() || "")
+      .filter(Boolean)
+  ).size;
+  const completedOrdersCount = orders.filter(order => getOrderStatus(order) === 'completed').length;
+  const pendingOrdersCount = orders.filter(order => getOrderStatus(order) === 'pending').length;
+  const inProgressOrdersCount = orders.filter(order => getOrderStatus(order) === 'in_progress').length;
+  const recentOrders = orders.slice(0, 4);
+  const recentFeedbacks = feedbacks.slice(0, 4);
+  const feedbackCount = feedbacks.length;
+
+  const itemImageMap = menuItems.reduce((map, item) => {
+    if (item.image_url) map[item.name] = item.image_url;
+    return map;
+  }, {});
+
+  const itemSales = orders.reduce((acc, order) => {
+    (order.order_items || []).forEach(item => {
+      const itemName = item.item_name || item.name || "Unknown";
+      acc[itemName] = (acc[itemName] || 0) + (item.qty || 0);
+    });
+    return acc;
+  }, {});
+
+  const popularItems = Object.entries(itemSales)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6)
+    .map(([item, qty]) => ({
+      item,
+      qty,
+      image: itemImageMap[item] || "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=500&q=80"
+    }));
+
+  const trendingItems = popularItems.slice(0, 5).map((entry, index) => ({
+    ...entry,
+    sales: entry.qty * 12,
+  }));
+
+  const mostSellingItems = popularItems.slice(0, 5);
+
   const categories = ["tea", "meal", "juice", "roaster"];
   const categoryOptions = Array.from(new Set([
     ...categories,
@@ -577,6 +654,14 @@ export default function Admin() {
       <ul className="nav nav-tabs mb-4">
         <li className="nav-item">
           <button
+            className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            Dashboard
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
             className={`nav-link ${activeTab === 'menu' ? 'active' : ''}`}
             onClick={() => setActiveTab('menu')}
           >
@@ -594,13 +679,231 @@ export default function Admin() {
         </li>
         <li className="nav-item">
           <button
-            className={`nav-link ${activeTab === 'sales' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sales')}
+            className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
           >
-            Sales Dashboard
+            Analytics
           </button>
         </li>
       </ul>
+
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+        <div className="admin-dashboard-view">
+          <div className="row g-3 mb-4">
+            <div className="col-md-3">
+              <div className="card admin-summary-card text-center p-3">
+                <div className="admin-summary-value">{totalMenus}</div>
+                <div className="admin-summary-label">Total Menus</div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card admin-summary-card text-center p-3">
+                <div className="admin-summary-value">₹{salesData.totalSales?.toFixed(0)}</div>
+                <div className="admin-summary-label">Total Revenue</div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card admin-summary-card text-center p-3">
+                <div className="admin-summary-value">{totalOrders}</div>
+                <div className="admin-summary-label">Total Orders</div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card admin-summary-card text-center p-3">
+                <div className="admin-summary-value">{uniqueClients}</div>
+                <div className="admin-summary-label">Total Clients</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-lg-8">
+              <div className="card h-100 dashboard-card">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                      <h5 className="mb-1">Orders Summary</h5>
+                      <p className="text-muted mb-0">Latest order status and counts.</p>
+                    </div>
+                    <span className="badge bg-success p-2">Updated live</span>
+                  </div>
+                  <div className="row g-3">
+                    <div className="col-sm-4">
+                      <div className="dashboard-metric-card">
+                        <span className="metric-label">New Orders</span>
+                        <strong>{pendingOrdersCount}</strong>
+                      </div>
+                    </div>
+                    <div className="col-sm-4">
+                      <div className="dashboard-metric-card">
+                        <span className="metric-label">In Progress</span>
+                        <strong>{inProgressOrdersCount}</strong>
+                      </div>
+                    </div>
+                    <div className="col-sm-4">
+                      <div className="dashboard-metric-card">
+                        <span className="metric-label">Delivered</span>
+                        <strong>{completedOrdersCount}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="row mt-4 g-3">
+                    <div className="col-md-6">
+                      <div className="dashboard-status-box p-3">
+                        <p className="mb-2">Pending Orders</p>
+                        <div className="progress" style={{ height: 6 }}>
+                          <div
+                            className="progress-bar bg-warning"
+                            role="progressbar"
+                            style={{ width: `${totalOrders ? (pendingOrdersCount / totalOrders) * 100 : 0}%` }}
+                            aria-valuenow={pendingOrdersCount}
+                            aria-valuemin="0"
+                            aria-valuemax={totalOrders}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="dashboard-status-box p-3">
+                        <p className="mb-2">Completed Orders</p>
+                        <div className="progress" style={{ height: 6 }}>
+                          <div
+                            className="progress-bar bg-success"
+                            role="progressbar"
+                            style={{ width: `${totalOrders ? (completedOrdersCount / totalOrders) * 100 : 0}%` }}
+                            aria-valuenow={completedOrdersCount}
+                            aria-valuemin="0"
+                            aria-valuemax={totalOrders}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-4">
+              <div className="card h-100 dashboard-card">
+                <div className="card-body">
+                  <h5 className="mb-3">Recent Orders</h5>
+                  {recentOrders.length === 0 ? (
+                    <p className="text-muted">No recent orders yet.</p>
+                  ) : (
+                    <div className="list-group admin-recent-orders">
+                      {recentOrders.map(order => (
+                        <div key={order.id || order.order_id} className="list-group-item">
+                          <div className="d-flex justify-content-between align-items-center">
+                            <div>
+                              <strong>{order.order_id || order.id}</strong>
+                              <div className="small text-muted">{order.customer_name || 'Guest'}</div>
+                            </div>
+                            <span className={`badge ${getOrderBadgeClass(order)}`}>{getOrderLabel(order)}</span>
+                          </div>
+                          <div className="small text-muted mt-2">₹{order.total || 0} · {new Date(order.created_at).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3">
+            <div className="col-lg-8">
+              <div className="card dashboard-card">
+                <div className="card-body">
+                  <h5 className="mb-3">Recent Feedback</h5>
+                  {recentFeedbacks.length === 0 ? (
+                    <p className="text-muted">No customer feedback yet.</p>
+                  ) : (
+                    <div className="list-group admin-feedback-list">
+                      {recentFeedbacks.map(feedback => (
+                        <div key={feedback.id} className="list-group-item">
+                          <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                              <strong>{feedback.name}</strong>
+                              <div className="small text-muted">{feedback.email} {feedback.phone ? `• ${feedback.phone}` : ''}</div>
+                            </div>
+                            <div className="text-end small text-muted">{new Date(feedback.created_at).toLocaleDateString()}</div>
+                          </div>
+                          <p className="mb-0 mt-2">{feedback.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-4">
+              <div className="card dashboard-card">
+                <div className="card-body">
+                  <h5 className="mb-3">Feedback Count</h5>
+                  <div className="display-5 fw-bold">{feedbackCount}</div>
+                  <p className="text-muted mb-0">Customer messages received from Contact form.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3">
+            <div className="col-lg-8">
+              <div className="card dashboard-card">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h5 className="mb-1">Revenue Trend</h5>
+                      <p className="text-muted mb-0">Sales over selected periods.</p>
+                    </div>
+                    <div className="d-flex gap-2">
+                      {['1m', '3m', '1y'].map(value => (
+                        <button
+                          key={value}
+                          type="button"
+                          className={`btn btn-sm ${salesRange === value ? 'btn-primary' : 'btn-outline-secondary'}`}
+                          onClick={() => setSalesRange(value)}
+                        >
+                          {value === '1m' ? '1M' : value === '3m' ? '3M' : '1Y'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="sales-chart dashboard-sales-chart">
+                    {chartData.map((point, index) => {
+                      const maxValue = Math.max(...chartData.map(p => p.total), 1);
+                      const height = point.total === 0 ? 12 : Math.max(12, Math.round((point.total / maxValue) * 100));
+                      return (
+                        <div key={`${point.label}-${index}`} className="sales-chart-column">
+                          <div className="sales-chart-bar" style={{ height: `${height}%` }}>
+                            <span>₹{point.total.toFixed(0)}</span>
+                          </div>
+                          <div className="sales-chart-label">{point.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-4">
+              <div className="card dashboard-card">
+                <div className="card-body">
+                  <h5 className="mb-3">Popular Items</h5>
+                  {getPopularItemsForRange().map(([item, qty], index) => (
+                    <div key={index} className="d-flex justify-content-between align-items-center mb-3">
+                      <div>{item}</div>
+                      <div className="text-secondary">{qty}</div>
+                    </div>
+                  ))}
+                  {getPopularItemsForRange().length === 0 && <p className="text-muted">No item data available.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Menu Management Tab */}
       {activeTab === 'menu' && (
@@ -891,124 +1194,178 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Sales Dashboard Tab */}
-      {activeTab === 'sales' && (
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
         <div>
-          <h4>Sales Dashboard</h4>
-          <div className="row mb-4">
-            <div className="col-md-3">
-              <div className="card text-center">
+          <div className="d-flex justify-content-between align-items-start mb-4">
+            <div>
+              <h4>Analytics</h4>
+              <p className="text-muted">Restaurant summary with sales, item trends and customer feedback.</p>
+            </div>
+            <button className="btn btn-outline-secondary btn-sm">
+              Filter Period
+            </button>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-lg-8">
+              <div className="card analytics-card h-100">
                 <div className="card-body">
-                  <h5 className="card-title">Total Sales</h5>
-                  <h3 className="text-success">₹{salesData.totalSales?.toFixed(2)}</h3>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h5 className="mb-1">Chart Orders</h5>
+                      <p className="text-muted mb-0">Total sales and average sales per day.</p>
+                    </div>
+                    <button className="btn btn-sm btn-outline-primary">Weekly</button>
+                  </div>
+                  <div className="analytics-graph">
+                    {(() => {
+                      const lineData = buildLineChart(chartData);
+                      return (
+                        <div className="analytics-line-graph-wrapper">
+                          <svg
+                            viewBox={`0 0 ${lineData.width} ${lineData.height}`}
+                            className="analytics-line-graph-svg"
+                          >
+                            <defs>
+                              <linearGradient id="analytics-area-gradient" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stopColor="rgba(70, 132, 255, 0.28)" />
+                                <stop offset="100%" stopColor="rgba(70, 132, 255, 0)" />
+                              </linearGradient>
+                            </defs>
+                            {[0, 1, 2, 3].map((lineIndex) => {
+                              const y = lineData.height - lineData.padding - (lineIndex * (lineData.height - lineData.padding * 2) / 3);
+                              return (
+                                <line
+                                  key={lineIndex}
+                                  x1={lineData.padding}
+                                  y1={y}
+                                  x2={lineData.width - lineData.padding}
+                                  y2={y}
+                                  stroke="rgba(108, 117, 125, 0.14)"
+                                  strokeWidth="1"
+                                />
+                              );
+                            })}
+                            <path
+                              d={lineData.areaPath}
+                              fill="url(#analytics-area-gradient)"
+                              opacity="0.9"
+                            />
+                            <path
+                              d={lineData.linePath}
+                              fill="none"
+                              stroke="#467ffd"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            {lineData.points.map((pt, index) => (
+                              <g key={`point-${index}`}> 
+                                <circle cx={pt.x} cy={pt.y} r="5" fill="#ffffff" stroke="#467ffd" strokeWidth="3" />
+                                <text x={pt.x} y={pt.y - 12} textAnchor="middle" className="analytics-point-label">
+                                  ₹{pt.value.toFixed(0)}
+                                </text>
+                              </g>
+                            ))}
+                          </svg>
+                          <div className="analytics-line-labels">
+                            {lineData.points.map((pt, index) => (
+                              <div key={`label-${index}`} className="analytics-line-label-item">
+                                {pt.label}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="col-md-3">
-              <div className="card text-center">
+
+            <div className="col-lg-4">
+              <div className="card analytics-card h-100">
                 <div className="card-body">
-                  <h5 className="card-title">Today's Sales</h5>
-                  <h3 className="text-primary">₹{salesData.todaySales?.toFixed(2)}</h3>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="card text-center">
-                <div className="card-body">
-                  <h5 className="card-title">Completed Orders</h5>
-                  <h3 className="text-info">{salesData.completedOrders}</h3>
-                </div>
-              </div>
-            </div>
-            <div className="col-md-3">
-              <div className="card text-center">
-                <div className="card-body">
-                  <h5 className="card-title">Pending Orders</h5>
-                  <h3 className="text-warning">{salesData.pendingOrders}</h3>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h5 className="mb-1">Trending Items</h5>
+                      <p className="text-muted mb-0">Top-selling products this week.</p>
+                    </div>
+                    <button className="btn btn-sm btn-outline-primary">Weekly</button>
+                  </div>
+                  <div className="trending-items-list">
+                    {trendingItems.map(item => (
+                      <div key={item.item} className="trending-item d-flex align-items-center justify-content-between mb-3">
+                        <div className="d-flex align-items-center gap-3">
+                          <img src={item.image} alt={item.item} className="trending-thumb" />
+                          <div>
+                            <strong>{item.item}</strong>
+                            <div className="small text-muted">{item.qty} sales</div>
+                          </div>
+                        </div>
+                        <div className={`trend-badge ${item.sales > 200 ? 'up' : 'down'}`}>
+                          {item.sales}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="card mb-4">
-            <div className="card-header">
-              <h5>Sales Trend</h5>
-            </div>
-            <div className="card-body">
-              <div className="d-flex flex-wrap gap-2 mb-3 admin-chart-controls">
-                {[
-                  { value: '1m', label: '1 Month' },
-                  { value: '3m', label: '3 Months' },
-                  { value: '1y', label: '1 Year' },
-                  { value: 'custom', label: 'Custom' }
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`btn btn-outline-secondary sales-range-pill ${salesRange === option.value ? 'active' : ''}`}
-                    onClick={() => setSalesRange(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-
-              {salesRange === 'custom' && (
-                <div className="row g-3 mb-4">
-                  <div className="col-md-6">
-                    <label className="form-label">Start date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={salesFromDate}
-                      onChange={(e) => setSalesFromDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">End date</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={salesToDate}
-                      onChange={(e) => setSalesToDate(e.target.value)}
-                    />
+          <div className="row g-3">
+            <div className="col-lg-8">
+              <div className="card analytics-card">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">Most Favorite Items</h5>
+                  <div className="btn-group btn-group-sm">
+                    <button className="btn btn-outline-secondary">Monthly</button>
+                    <button className="btn btn-outline-secondary">Weekly</button>
+                    <button className="btn btn-outline-secondary">Today</button>
                   </div>
                 </div>
-              )}
-
-              <div className="sales-chart">
-                {chartData.map((point, index) => {
-                  const maxValue = Math.max(...chartData.map(p => p.total), 1);
-                  const height = point.total === 0 ? 10 : Math.max(10, Math.round((point.total / maxValue) * 100));
-                  return (
-                    <div key={`${point.label}-${index}`} className="sales-chart-column">
-                      <div className="sales-chart-bar" style={{ height: `${height}%` }}>
-                        <span>₹{point.total.toFixed(0)}</span>
+                <div className="card-body">
+                  <div className="row g-3">
+                    {popularItems.slice(0, 6).map((item, index) => (
+                      <div key={item.item} className="col-md-4">
+                        <div className="favorite-item-card h-100">
+                          <img src={item.image} alt={item.item} />
+                          <div className="favorite-item-body">
+                            <strong>{item.item}</strong>
+                            <div className="text-muted small">{item.qty} orders</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="sales-chart-label">{point.label}</div>
-                    </div>
-                  );
-                })}
+                    ))}
+                    {popularItems.length === 0 && <p className="text-muted">No favorite items available yet.</p>}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <h5>Popular Items</h5>
-            </div>
-            <div className="card-body">
-              <div className="row">
-                {getPopularItemsForRange().map(([item, qty], index) => (
-                  <div key={index} className="col-md-4 mb-3">
-                    <div className="card h-100">
-                      <div className="card-body text-center">
-                        <h6>{item}</h6>
-                        <p className="text-muted">{qty} orders</p>
-                      </div>
-                    </div>
+            <div className="col-lg-4">
+              <div className="card analytics-card">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                  <h5 className="mb-0">Most Selling Items</h5>
+                  <div className="btn-group btn-group-sm">
+                    <button className="btn btn-outline-secondary">Monthly</button>
+                    <button className="btn btn-outline-secondary">Weekly</button>
+                    <button className="btn btn-outline-secondary">Today</button>
                   </div>
-                ))}
+                </div>
+                <div className="card-body">
+                  {mostSellingItems.map((item, index) => (
+                    <div key={item.item} className="most-selling-item d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <strong>{item.item}</strong>
+                        <div className="small text-muted">{item.qty} orders</div>
+                      </div>
+                      <div className="text-primary">₹{(item.qty * 10).toFixed(2)}</div>
+                    </div>
+                  ))}
+                  {mostSellingItems.length === 0 && <p className="text-muted">No selling items available yet.</p>}
+                </div>
               </div>
             </div>
           </div>

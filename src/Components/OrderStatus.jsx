@@ -83,7 +83,7 @@ export default function OrderStatus() {
         setOrder(null);
       } else {
         setOrder(data);
-        setLastRefresh(new Date().toLocaleTimeString());
+        setLastRefresh(new Date().toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata" }));
       }
       setLoading(false);
     };
@@ -153,7 +153,7 @@ export default function OrderStatus() {
             <div className="d-flex justify-content-between align-items-start mb-3">
               <div>
                 <h5 className="card-title mb-1">Order {order.order_id || order.id}</h5>
-                <p className="text-muted mb-1">Placed on {new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-muted mb-1">Placed on {new Date(order.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</p>
                 <span className={`badge ${badgeClass}`}>{statusLabel}</span>
               </div>
               <div className="text-end text-muted small">

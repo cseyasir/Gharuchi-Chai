@@ -1,21 +1,41 @@
 import React, { useState } from "react";
+import { supabase } from "./supabaseClient";
 import "./Contact.css";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState("idle");
+  const [errorText, setErrorText] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorText("");
     if (!form.name || !form.email || !form.message) {
       setStatus("error");
+      setErrorText("Please fill in your name, email and message.");
       return;
     }
+
+    setStatus("loading");
+
+    const { error } = await supabase.from("feedback").insert([{ 
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim() || null,
+      message: form.message.trim()
+    }]);
+
+    if (error) {
+      setStatus("error");
+      setErrorText(error.message || "Unable to send feedback.");
+      return;
+    }
+
     setStatus("success");
     setForm({ name: "", email: "", phone: "", message: "" });
   };
@@ -71,7 +91,7 @@ export default function Contact() {
                 <div className="alert alert-success">Thanks for reaching out! We'll contact you soon.</div>
               )}
               {status === "error" && (
-                <div className="alert alert-danger">Please fill in your name, email and message.</div>
+                <div className="alert alert-danger">{errorText || "Please fill in your name, email and message."}</div>
               )}
 
               <form onSubmit={handleSubmit} className="contact-form">
