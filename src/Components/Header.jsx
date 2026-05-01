@@ -8,7 +8,7 @@ export default function Header() {
       {/* LOGO */}
       <Link to="/" className="navbar-brand d-flex align-items-center">
         <span className="logo-icon">🍴</span>
-        <h1 className="m-0 logo-text">GaruhChai</h1>
+        <h1 className="m-0 logo-text">GarxechChai</h1>
      </Link>
 
       {/* TOGGLER */}

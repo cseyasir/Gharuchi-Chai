@@ -10,7 +10,7 @@ export default function Landing() {
           <div className="row align-items-center">
             <div className="col-lg-6 text-white hero-copy">
               <span className="hero-badge">Fresh, warm, handmade</span>
-              <h1 className="display-4 mt-3">GaruhChai</h1>
+              <h1 className="display-4 mt-3">GarxechChai</h1>
               <p className="lead text-light mt-3">
                 A local chai house experience with fast ordering, live order tracking and delicious street-style meals.
               </p>
@@ -145,7 +145,7 @@ export default function Landing() {
       <section className="landing-cta py-5">
         <div className="container text-center text-white py-5 rounded-4 shadow-lg cta-card">
           <h2>Ready for a comforting meal?</h2>
-          <p className="mb-4">Order now and experience GaruhChai on your table with live order tracking.</p>
+          <p className="mb-4">Order now and experience GarxechChai on your table with live order tracking.</p>
           <Link to="/booking" className="btn btn-warning btn-lg">
             Start Your Order
           </Link>

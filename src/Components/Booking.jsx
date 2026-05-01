@@ -184,7 +184,7 @@ export default function Booking() {
     doc.setFontSize(24);
     doc.setTextColor("#ffffff");
     doc.setFont("helvetica", "bold");
-    doc.text("GaruhChai", leftMargin, 48);
+    doc.text("GarxechChai", leftMargin, 48);
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -264,7 +264,7 @@ export default function Booking() {
     doc.text(saved ? "Order confirmed" : "Order pending", leftMargin + 16, y);
     doc.text("Please call +917889308062 for order updates.", leftMargin + 16, y + 18);
 
-    doc.save(`GaruhChai-Bill-${bill.id}.pdf`);
+    doc.save(`GarxechChai-Bill-${bill.id}.pdf`);
   };
 
   const confirmOrder = async () => {
