@@ -5,7 +5,7 @@ export default function AdminLogin() {
   const [pass, setPass] = useState("");
   const nav = useNavigate();
   const LOCAL_ADMIN_KEY = "adminLoggedIn";
-  const LOCAL_ADMIN_PASSWORD = "admin123";
+  const LOCAL_ADMIN_PASSWORD = "adminowner123";
 
   useEffect(() => {
     const localAdmin = localStorage.getItem(LOCAL_ADMIN_KEY) === "true";
