@@ -5,6 +5,7 @@ import Footer from "./Components/Footer";
 import Landing from "./Components/Landing";
 import Menu from "./Components/Menu";
 import Booking from "./Components/Booking";
+import MyOrders from "./Components/MyOrders";
 import Contact from "./Components/Contact";
 import Admin from "./Components/Admin";
 import AdminLogin from "./Components/AdminLogin";
@@ -20,6 +21,7 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/menu" element={<Menu />} />
         <Route path="/booking" element={<Booking />} />
+        <Route path="/orders" element={<MyOrders />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/track/*" element={<OrderStatus />} />
         <Route path="/admin" element={<Admin />} />

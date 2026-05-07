@@ -24,6 +24,7 @@ export default function OrderStatus() {
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [notificationPermission, setNotificationPermission] = useState('default');
 
   useEffect(() => {
     const getOrderIdFromLocation = () => {
@@ -37,6 +38,51 @@ export default function OrderStatus() {
 
     setOrderId(getOrderIdFromLocation());
   }, [location.search, params]);
+
+  useEffect(() => {
+    // Request notification permission
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationPermission(permission);
+        });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!orderId) return;
+
+    // Set up real-time subscription for order status changes
+    const subscription = supabase
+      .channel(`order-${orderId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `order_id=eq.${orderId}`
+      }, (payload) => {
+        console.log('Order status changed:', payload);
+        const newOrder = payload.new;
+        setOrder(newOrder);
+
+        // Send browser notification if status changed
+        if (notificationPermission === 'granted' && order) {
+          const oldStatus = order.status ?? order.order_status ?? "pending";
+          const newStatus = newOrder.status ?? newOrder.order_status ?? "pending";
+
+          if (oldStatus !== newStatus) {
+            sendStatusNotification(newStatus, newOrder.order_id);
+          }
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [orderId, notificationPermission, order]);
 
   useEffect(() => {
     if (!orderId) {
@@ -97,6 +143,26 @@ export default function OrderStatus() {
     return () => clearInterval(interval);
   }, [orderId]);
 
+  const sendStatusNotification = (newStatus, orderId) => {
+    if (notificationPermission !== 'granted') return;
+
+    const statusMessages = {
+      pending: "Your order is now pending preparation.",
+      in_progress: "Your order is now being prepared!",
+      dispatched: "Your order has been dispatched and is on the way!",
+      completed: "Your order has been completed and delivered!"
+    };
+
+    const message = statusMessages[newStatus] || `Your order status has been updated to ${statusLabels[newStatus] || newStatus}`;
+
+    new Notification('GarxechChai Order Update', {
+      body: message,
+      icon: '/favicon.ico', // You can add a custom icon
+      tag: `order-${orderId}`, // Prevents duplicate notifications
+      requireInteraction: true
+    });
+  };
+
   const status = order ? (order.status ?? order.order_status ?? "pending") : "pending";
   const statusLabel = statusLabels[status] || "Pending";
   const badgeClass = badgeClasses[status] || "bg-warning";
@@ -112,6 +178,28 @@ export default function OrderStatus() {
           Back to Home
         </Link>
       </div>
+
+      {/* Notification Permission Section */}
+      {'Notification' in window && notificationPermission !== 'granted' && (
+        <div className="alert alert-info mb-4">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <strong>🔔 Enable Notifications</strong>
+              <p className="mb-0 small">Get instant updates when your order status changes!</p>
+            </div>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                Notification.requestPermission().then(permission => {
+                  setNotificationPermission(permission);
+                });
+              }}
+            >
+              Enable Notifications
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="card shadow-sm mb-4">

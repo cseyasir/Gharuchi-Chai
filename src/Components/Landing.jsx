@@ -1,8 +1,54 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "./supabaseClient";
 import "./Landing.css";
 
 export default function Landing() {
+  const [popularItems, setPopularItems] = useState([]);
+
+  useEffect(() => {
+    fetchPopularItems();
+  }, []);
+
+  const fetchPopularItems = async () => {
+    try {
+      // Fetch popular items from database - you can add a 'is_popular' field to menu table
+      // For now, we'll fetch some items from different categories
+      const { data, error } = await supabase
+        .from("menu")
+        .select("*")
+        .eq("is_active", true)
+        .in("name", ["Nagro Special Tea", "Tuja (Roaster Meat)", "Orange Juice", "Lemon Tea", "Veg Sandwich", "Patties"]);
+
+      if (error) {
+        console.error("Error fetching popular items:", error);
+        // Fallback to static data if database fetch fails
+        setPopularItems([
+          { name: "Nagro Special Tea", price: 45, description: "Spiced and milky tea with masala and warmth." },
+          { name: "Tuja Roaster Meat", price: 95, description: "Juicy roasted meat seasoned with local spices." },
+          { name: "Orange Juice", price: 39, description: "Freshly squeezed and naturally sweet." },
+          { name: "Lemon Tea", price: 55, description: "Refreshing citrus tea with a bright zing." },
+          { name: "Veg Sandwich", price: 75, description: "Crispy sandwich loaded with fresh vegetables and chutney." },
+          { name: "Patties", price: 65, description: "Warm flaky pastry stuffed with savory filling." }
+        ]);
+        return;
+      }
+
+      setPopularItems(data || []);
+    } catch (error) {
+      console.error("Error fetching popular items:", error);
+      // Fallback to static data
+      setPopularItems([
+        { name: "Nagro Special Tea", price: 45, description: "Spiced and milky tea with masala and warmth." },
+        { name: "Tuja Roaster Meat", price: 95, description: "Juicy roasted meat seasoned with local spices." },
+        { name: "Orange Juice", price: 39, description: "Freshly squeezed and naturally sweet." },
+        { name: "Lemon Tea", price: 55, description: "Refreshing citrus tea with a bright zing." },
+        { name: "Veg Sandwich", price: 75, description: "Crispy sandwich loaded with fresh vegetables and chutney." },
+        { name: "Patties", price: 65, description: "Warm flaky pastry stuffed with savory filling." }
+      ]);
+    }
+  };
+
   return (
     <div className="landing-page">
       <section className="landing-hero d-flex align-items-center">
@@ -96,48 +142,15 @@ export default function Landing() {
             <h2>Popular items we recommend</h2>
           </div>
           <div className="row g-4 justify-content-center">
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹45</div>
-                <h5>Nagro Special Tea</h5>
-                <p>Spiced and milky tea with masala and warmth.</p>
+            {popularItems.map((item, index) => (
+              <div className="col-md-4" key={item.id || index}>
+                <div className="menu-card p-4 rounded shadow-sm">
+                  <div className="menu-price">₹{item.price}</div>
+                  <h5>{item.name}</h5>
+                  <p>{item.description || "Delicious and fresh."}</p>
+                </div>
               </div>
-            </div>
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹95</div>
-                <h5>Tuja Roaster Meat</h5>
-                <p>Juicy roasted meat seasoned with local spices.</p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹39</div>
-                <h5>Orange Juice</h5>
-                <p>Freshly squeezed and naturally sweet.</p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹55</div>
-                <h5>Lemon Tea</h5>
-                <p>Refreshing citrus tea with a bright zing.</p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹75</div>
-                <h5>Veg Sandwich</h5>
-                <p>Crispy sandwich loaded with fresh vegetables and chutney.</p>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="menu-card p-4 rounded shadow-sm">
-                <div className="menu-price">₹65</div>
-                <h5>Patties</h5>
-                <p>Warm flaky pastry stuffed with savory filling.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

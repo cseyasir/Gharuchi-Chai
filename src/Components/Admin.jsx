@@ -24,10 +24,48 @@ export default function Admin() {
   const [orderStartDate, setOrderStartDate] = useState("");
   const [orderEndDate, setOrderEndDate] = useState("");
   const [salesRange, setSalesRange] = useState("3m");
+  const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryIcon, setNewCategoryIcon] = useState("");
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [editingCategoryIcon, setEditingCategoryIcon] = useState("");
   const salesFromDate = "";
   const salesToDate = "";
   const LOCAL_ADMIN_KEY = "adminLoggedIn";
+const deleteCategory = async (categoryName) => {
+  const itemsUsingCategory = menuItems.filter(
+    item => item.category === categoryName
+  );
 
+  if (itemsUsingCategory.length > 0) {
+    alert("Cannot delete category. Move or delete menu items first.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete category "${categoryName}"?`
+  );
+
+  if (!confirmed) return;
+
+  const updated = categories.filter(
+    cat => (typeof cat === 'string' ? cat : cat.name) !== categoryName
+  );
+
+  setCategories(updated);
+
+  localStorage.setItem(
+    'adminCategories',
+    JSON.stringify(
+      updated.filter(
+        c => !["tea", "meal", "juice", "roaster"].includes(
+          typeof c === 'string' ? c : c.name
+        )
+      )
+    )
+  );
+};
   const getOrderStatus = useCallback((order) => {
     return order?.status ?? order?.order_status ?? 'pending';
   }, []);
@@ -55,8 +93,59 @@ export default function Admin() {
       .select("*")
       .order("category", { ascending: true });
 
-    if (error) console.error(error);
-    else setMenuItems(data || []);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const menuItems = data || [];
+    setMenuItems(menuItems);
+
+    const defaultCategories = [
+      { name: "tea", icon: "🍵" },
+      { name: "meal", icon: "🍽️" },
+      { name: "juice", icon: "🧃" },
+      { name: "roaster", icon: "☕" }
+    ];
+
+    // Load stored categories from localStorage and normalize them to objects
+    const storedCategoriesRaw = JSON.parse(localStorage.getItem('adminCategories') || '[]');
+    const storedCategories = Array.isArray(storedCategoriesRaw)
+      ? storedCategoriesRaw.map(cat => {
+          if (typeof cat === 'string') {
+            return { name: cat, icon: '📁' };
+          }
+          return {
+            name: String(cat?.name || ''),
+            icon: String(cat?.icon || '📁'),
+          };
+        }).filter(cat => cat.name)
+      : [];
+
+    // Get unique categories from menu items
+    const menuCategories = Array.from(new Set(menuItems.map(item => item.category || "").filter(Boolean)));
+
+    // Merge: start with default, then stored, then new from menu
+    const allCategories = [...defaultCategories];
+
+    // Add stored categories not in defaults
+    storedCategories.forEach(cat => {
+      if (!allCategories.find(c => c.name === cat.name)) {
+        allCategories.push(cat);
+      }
+    });
+
+    // Add menu categories not in allCategories
+    menuCategories.forEach(catName => {
+      if (!allCategories.find(c => c.name === catName)) {
+        allCategories.push({ name: catName, icon: "📁" }); // default icon for new
+      }
+    });
+
+    // Sort by name
+    allCategories.sort((a, b) => a.name.localeCompare(b.name));
+
+    setCategories(allCategories);
   }, []);
 
   const fetchOrders = useCallback(async () => {
@@ -309,6 +398,84 @@ export default function Admin() {
 
     if (error) console.error(error);
     else fetchMenuItems();
+  };
+
+  const addCategoryOption = () => {
+    const trimmedName = newCategoryName.trim().toLowerCase();
+    const trimmedIcon = newCategoryIcon.trim();
+    if (!trimmedName) {
+      alert("Enter a category name first.");
+      return;
+    }
+    if (!trimmedIcon) {
+      alert("Enter an icon for the category.");
+      return;
+    }
+    const newCat = { name: trimmedName, icon: trimmedIcon };
+    setCategories((prev) => {
+      if (prev.find(c => c.name === trimmedName)) return prev;
+      const updated = [...prev, newCat].sort((a, b) => a.name.localeCompare(b.name));
+      localStorage.setItem('adminCategories', JSON.stringify(updated.filter(c => !["tea", "meal", "juice", "roaster"].includes(c.name))));
+      return updated;
+    });
+    setNewCategoryName("");
+    setNewCategoryIcon("");
+  };
+
+  const startEditingCategory = (categoryObj) => {
+    const categoryName = typeof categoryObj === 'string' ? categoryObj : categoryObj.name;
+    const categoryIcon = typeof categoryObj === 'string' ? '' : categoryObj.icon;
+    setEditingCategory(categoryName);
+    setEditingCategoryName(categoryName);
+    setEditingCategoryIcon(categoryIcon);
+  };
+
+  const cancelCategoryEdit = () => {
+    setEditingCategory(null);
+    setEditingCategoryName("");
+    setEditingCategoryIcon("");
+  };
+
+  const saveEditedCategory = async () => {
+    if (!editingCategory) return;
+    const trimmedName = editingCategoryName.trim().toLowerCase();
+    const trimmedIcon = editingCategoryIcon.trim();
+    if (!trimmedName) {
+      alert("Enter a valid category name.");
+      return;
+    }
+    if (!trimmedIcon) {
+      alert("Enter an icon for the category.");
+      return;
+    }
+    if (trimmedName === editingCategory && trimmedIcon === categories.find(c => c.name === editingCategory)?.icon) {
+      cancelCategoryEdit();
+      return;
+    }
+    if (categories.find(c => c.name === trimmedName && c.name !== editingCategory)) {
+      alert("That category already exists.");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("menu")
+      .update({ category: trimmedName })
+      .eq("category", editingCategory);
+
+    if (error) {
+      console.error("Edit category failed:", error);
+      alert(`Error editing category: ${error.message}`);
+    } else {
+      setCategories((prev) => {
+        const updated = prev.map(cat => cat.name === editingCategory ? { name: trimmedName, icon: trimmedIcon } : cat).sort((a, b) => a.name.localeCompare(b.name));
+        localStorage.setItem('adminCategories', JSON.stringify(updated.filter(c => !["tea", "meal", "juice", "roaster"].includes(c.name))));
+        return updated;
+      });
+      await fetchMenuItems();
+      cancelCategoryEdit();
+    }
+    setLoading(false);
   };
 
   // Orders Management
@@ -607,9 +774,10 @@ export default function Admin() {
 
   const mostSellingItems = popularItems.slice(0, 5);
 
-  const categories = ["tea", "meal", "juice", "roaster"];
+  const defaultCategories = ["tea", "meal", "juice", "roaster"];
   const categoryOptions = Array.from(new Set([
-    ...categories,
+    ...defaultCategories,
+    ...categories.map(cat => typeof cat === 'string' ? cat : cat.name),
     ...menuItems.map(item => item.category || "")
   ].filter(Boolean))).sort();
 
@@ -947,7 +1115,7 @@ export default function Admin() {
                     ))}
                   </select>
                 </div>
-                <div className="col-md-4">
+                <div className="col-md-6">
                   <input
                     type="text"
                     className="form-control"
@@ -956,16 +1124,33 @@ export default function Admin() {
                     onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
                   />
                 </div>
-                <div className="col-md-2">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Image URL"
-                    value={newItem.image_url}
-                    onChange={(e) => setNewItem({...newItem, image_url: e.target.value})}
-                  />
+                <div className="col-md-4">
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="New category name"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Icon"
+                      value={newCategoryIcon}
+                      onChange={(e) => setNewCategoryIcon(e.target.value)}
+                      style={{ maxWidth: "4.5rem" }}
+                    />
+                    <button
+                      className="btn btn-outline-secondary"
+                      type="button"
+                      onClick={addCategoryOption}
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
-                <div className="col-md-2">
+                <div className="col-md-3">
                   <button
                     className="btn btn-success w-100"
                     onClick={addMenuItem}
@@ -980,15 +1165,67 @@ export default function Admin() {
 
           {/* Menu Items List */}
           <div className="row">
-            {categories.map(category => (
-              <div key={category} className="col-md-6 mb-4">
-                <div className="card">
-                  <div className="card-header">
-                    <h5 className="mb-0">{category.charAt(0).toUpperCase() + category.slice(1)}</h5>
+            {categories.map(category => {
+              const categoryName = typeof category === 'string' ? category : category.name;
+              const categoryIcon = typeof category === 'string' ? '' : category.icon;
+              return (
+                <div key={categoryName} className="col-md-6 mb-4">
+                  <div className="card">
+                    <div className="card-header d-flex justify-content-between align-items-center gap-2">
+                      {editingCategory === categoryName ? (
+                      <div className="d-flex flex-column flex-md-row gap-2 w-100">
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          value={editingCategoryName}
+                          onChange={(e) => setEditingCategoryName(e.target.value)}
+                        />
+                        <input
+  type="text"
+  className="form-control form-control-sm"
+  placeholder="Category Icon"
+  value={editingCategoryIcon}
+  onChange={(e) => setEditingCategoryIcon(e.target.value)}
+/>
+                        <button
+                          className="btn btn-sm btn-outline-success"
+                          onClick={saveEditedCategory}
+                          disabled={loading}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={cancelCategoryEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <h5 className="mb-0">
+                          {categoryIcon ? `${categoryIcon} ` : ""}
+                          {categoryName.charAt(0).toUpperCase() + categoryName.slice(1)}
+                        </h5>
+                         <button
+    className="btn btn-sm btn-outline-secondary"
+    onClick={() => startEditingCategory(category)}
+  >
+    ✏️ Edit
+  </button>
+
+  <button
+    className="btn btn-sm btn-outline-danger"
+    onClick={() => deleteCategory(categoryName)}
+  >
+    🗑️ Delete
+  </button>
+                      </>
+                    )}
                   </div>
                   <div className="card-body">
                     {menuItems
-                      .filter(item => item.category === category)
+                      .filter(item => item.category === categoryName)
                       .map(item => (
                         <div key={item.id} className="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                           <div className="flex-grow-1">
@@ -1073,7 +1310,7 @@ export default function Admin() {
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}

@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
+import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage } from "./orderUtils";
 import "./Booking.css";
 
 export default function Booking() {
   const [menuData, setMenuData] = useState({});
+  const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState("tea");
   const [cart, setCart] = useState([]);
   const [name, setName] = useState("");
@@ -36,6 +38,11 @@ export default function Booking() {
 
   // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
   useEffect(() => {
+    getOrCreateUserId();
+    const storedCart = getCartFromStorage();
+    if (storedCart.length > 0) {
+      setCart(storedCart);
+    }
     fetchMenu();
   }, []);
 
@@ -65,6 +72,39 @@ export default function Booking() {
     });
 
     setMenuData(grouped);
+
+    // Try to fetch categories from categories table first
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name", { ascending: true });
+
+    let categoryObjects = [];
+
+    if (!categoriesError && categoriesData && categoriesData.length > 0) {
+      // Use categories from database
+      categoryObjects = categoriesData.map(cat => ({
+        value: cat.name,
+        label: cat.name.charAt(0).toUpperCase() + cat.name.slice(1),
+        icon: cat.icon || categoryIcons[cat.name] || "🍽️"
+      }));
+    } else {
+      // Fallback: Extract unique categories from menu items
+      const uniqueCategories = [...new Set(data.map(item => item.category))];
+      categoryObjects = uniqueCategories.map(cat => ({
+        value: cat,
+        label: cat.charAt(0).toUpperCase() + cat.slice(1),
+        icon: categoryIcons[cat] || "🍽️"
+      }));
+    }
+
+    setCategories(categoryObjects);
+
+    // Set default category to first available if current category doesn't exist
+    const availableCategories = categoryObjects.map(cat => cat.value);
+    if (!availableCategories.includes(category) && availableCategories.length > 0) {
+      setCategory(availableCategories[0]);
+    }
   };
 
   const items = menuData[category] || [];
@@ -102,13 +142,6 @@ export default function Booking() {
     });
   };
 
-  const categories = [
-    { value: "tea", label: "Tea" },
-    { value: "meal", label: "Meal" },
-    { value: "juice", label: "Juice" },
-    { value: "roaster", label: "Roaster" },
-  ];
-
   const categoryIcons = {
     tea: "☕",
     meal: "🍔",
@@ -117,6 +150,23 @@ export default function Booking() {
   };
 
   const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
+
+  const setCartFromOrderItems = (items) => {
+    const reorderCart = items.map(item => ({
+      id: item.id ? item.id : `${item.item_name}-${item.price}`,
+      name: item.item_name,
+      qty: item.qty || 1,
+      price: item.price || 0
+    }));
+
+    setCart(reorderCart);
+    saveCartToStorage(reorderCart);
+    setBill(null);
+  };
+
+  useEffect(() => {
+    saveCartToStorage(cart);
+  }, [cart]);
 
   const formatMonthlyOrderPrefix = () => {
     const now = new Date();
@@ -209,6 +259,7 @@ export default function Booking() {
   const clearCart = () => {
     if (cart.length === 0) return;
     if (window.confirm("Clear your cart and start again?")) {
+      clearCartStorage();
       setCart([]);
       setBill(null);
       setSaved(false);
@@ -366,6 +417,7 @@ export default function Booking() {
     const orderPayload = {
       order_id: bill.id,
       customer_name: bill.name,
+      user_id: getOrCreateUserId(),
       total: bill.total,
       status: 'pending',
       created_at: getISTTimestamp()
@@ -397,6 +449,7 @@ export default function Booking() {
 
       setBill(confirmedBill);
       setSaved(true);
+      clearCartStorage();
       setCart([]);
       alert("Order confirmed! Returning to booking page in 10 seconds.");
 
@@ -450,7 +503,7 @@ export default function Booking() {
             className={`category-tab ${category === cat.value ? "active" : ""}`}
             onClick={() => setCategory(cat.value)}
           >
-            <span className="category-thumb">{categoryIcons[cat.value]}</span>
+            <span className="category-thumb">{cat.icon}</span>
             <span>{cat.label}</span>
           </button>
         ))}
