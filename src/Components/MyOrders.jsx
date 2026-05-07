@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import { getOrCreateUserId, saveCartToStorage } from "./orderUtils";
@@ -25,12 +25,7 @@ export default function MyOrders() {
   const [error, setError] = useState("");
   const [userId] = useState(getOrCreateUserId());
 
-  useEffect(() => {
-    if (!userId) return;
-    fetchOrders();
-  }, [userId]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -48,7 +43,12 @@ export default function MyOrders() {
       setOrders(data || []);
     }
     setLoading(false);
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetchOrders();
+  }, [userId, fetchOrders]);
 
   const handleReorder = (order) => {
     if (!order?.order_items?.length) {

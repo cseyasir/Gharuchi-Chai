@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage } from "./orderUtils";
 import "./Booking.css";
+
+const categoryIcons = {
+  tea: "☕",
+  meal: "🍔",
+  juice: "🥤",
+  roaster: "🍖"
+};
 
 export default function Booking() {
   const [menuData, setMenuData] = useState({});
@@ -36,25 +43,7 @@ export default function Booking() {
     return images[name] || null;
   };
 
-  // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
-  useEffect(() => {
-    getOrCreateUserId();
-    const storedCart = getCartFromStorage();
-    if (storedCart.length > 0) {
-      setCart(storedCart);
-    }
-    fetchMenu();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimer.current) {
-        clearTimeout(resetTimer.current);
-      }
-    };
-  }, []);
-
-  const fetchMenu = async () => {
+  const fetchMenu = useCallback(async () => {
     const { data, error } = await supabase
       .from("menu")
       .select("*")
@@ -105,7 +94,25 @@ export default function Booking() {
     if (!availableCategories.includes(category) && availableCategories.length > 0) {
       setCategory(availableCategories[0]);
     }
-  };
+  }, [category]);
+
+  // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
+  useEffect(() => {
+    getOrCreateUserId();
+    const storedCart = getCartFromStorage();
+    if (storedCart.length > 0) {
+      setCart(storedCart);
+    }
+    fetchMenu();
+  }, [fetchMenu]);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimer.current) {
+        clearTimeout(resetTimer.current);
+      }
+    };
+  }, []);
 
   const items = menuData[category] || [];
 
@@ -142,27 +149,7 @@ export default function Booking() {
     });
   };
 
-  const categoryIcons = {
-    tea: "☕",
-    meal: "🍔",
-    juice: "🥤",
-    roaster: "🍖"
-  };
-
   const total = cart.reduce((sum, i) => sum + i.qty * i.price, 0);
-
-  const setCartFromOrderItems = (items) => {
-    const reorderCart = items.map(item => ({
-      id: item.id ? item.id : `${item.item_name}-${item.price}`,
-      name: item.item_name,
-      qty: item.qty || 1,
-      price: item.price || 0
-    }));
-
-    setCart(reorderCart);
-    saveCartToStorage(reorderCart);
-    setBill(null);
-  };
 
   useEffect(() => {
     saveCartToStorage(cart);

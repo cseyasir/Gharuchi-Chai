@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 
@@ -51,6 +51,26 @@ export default function OrderStatus() {
     }
   }, []);
 
+  const sendStatusNotification = useCallback((newStatus, orderId) => {
+    if (notificationPermission !== 'granted') return;
+
+    const statusMessages = {
+      pending: "Your order is now pending preparation.",
+      in_progress: "Your order is now being prepared!",
+      dispatched: "Your order has been dispatched and is on the way!",
+      completed: "Your order has been completed and delivered!"
+    };
+
+    const message = statusMessages[newStatus] || `Your order status has been updated to ${statusLabels[newStatus] || newStatus}`;
+
+    new Notification('GarxechChai Order Update', {
+      body: message,
+      icon: '/favicon.ico', // You can add a custom icon
+      tag: `order-${orderId}`, // Prevents duplicate notifications
+      requireInteraction: true
+    });
+  }, [notificationPermission]);
+
   useEffect(() => {
     if (!orderId) return;
 
@@ -82,7 +102,7 @@ export default function OrderStatus() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [orderId, notificationPermission, order]);
+  }, [orderId, notificationPermission, order, sendStatusNotification]);
 
   useEffect(() => {
     if (!orderId) {
@@ -142,26 +162,6 @@ export default function OrderStatus() {
 
     return () => clearInterval(interval);
   }, [orderId]);
-
-  const sendStatusNotification = (newStatus, orderId) => {
-    if (notificationPermission !== 'granted') return;
-
-    const statusMessages = {
-      pending: "Your order is now pending preparation.",
-      in_progress: "Your order is now being prepared!",
-      dispatched: "Your order has been dispatched and is on the way!",
-      completed: "Your order has been completed and delivered!"
-    };
-
-    const message = statusMessages[newStatus] || `Your order status has been updated to ${statusLabels[newStatus] || newStatus}`;
-
-    new Notification('GarxechChai Order Update', {
-      body: message,
-      icon: '/favicon.ico', // You can add a custom icon
-      tag: `order-${orderId}`, // Prevents duplicate notifications
-      requireInteraction: true
-    });
-  };
 
   const status = order ? (order.status ?? order.order_status ?? "pending") : "pending";
   const statusLabel = statusLabels[status] || "Pending";
