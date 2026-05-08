@@ -1,0 +1,38 @@
+.footer-section {
+  background: #061127;
+  color: white;
+  text-align: center;
+  padding: 22px 15px;
+  margin-top: 40px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.footer-brand {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fea116;
+  margin-bottom: 4px;
+}
+
+.footer-brand span {
+  color: #7cb342;
+}
+
+.footer-tagline {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+}
+
+.footer-contact p {
+  margin: 2px 0;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.82);
+}
+
+.footer-copy {
+  display: block;
+  margin-top: 14px;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.82rem;
+}

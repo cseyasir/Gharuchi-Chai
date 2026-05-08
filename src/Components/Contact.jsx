@@ -45,7 +45,7 @@ export default function Contact() {
       <div className="container">
         <div className="contact-hero text-center mb-5">
           <span className="contact-label">Contact Us</span>
-          <h1>Reach out to GaruhChai</h1>
+          <h1>Reach out to GarxechChai </h1>
           <p className="text-muted mx-auto contact-subtitle">
             Have a question, feedback, or want to place a custom order? Send us a message and we will
             get back to you shortly.
@@ -56,7 +56,7 @@ export default function Contact() {
           <div className="col-lg-3 col-sm-6">
             <div className="contact-card p-4 h-100">
               <h5>Visit Us</h5>
-              <p>Zangulpora, Devsar Kulgam</p>
+              <p>Devsar Kulgam</p>
             </div>
           </div>
           <div className="col-lg-3 col-sm-6">
@@ -68,7 +68,7 @@ export default function Contact() {
           <div className="col-lg-3 col-sm-6">
             <div className="contact-card p-4 h-100">
               <h5>Email</h5>
-              <p>support@garuhchai.com</p>
+              <p>supportGarxechChai@gmail.com</p>
             </div>
           </div>
           <div className="col-lg-3 col-sm-6">
@@ -150,11 +150,11 @@ export default function Contact() {
             <div className="contact-map-card p-4 shadow-sm rounded h-100">
               <h2>Our location</h2>
               <p className="text-muted mb-4">
-                Find GaruhChai on the map and plan your visit today.
+                Find GarxechChai  on the map and plan your visit today.
               </p>
               <div className="map-wrapper rounded overflow-hidden">
                 <iframe
-                  title="GaruhChai location"
+                  title="GarxechChai  location"
                   src="https://www.google.com/maps?q=33.636417,75.064694&output=embed"
                   width="100%"
                   height="330"

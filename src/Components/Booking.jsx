@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage, getNameFromStorage, getPhoneFromStorage, saveNameToStorage, savePhoneToStorage } from "./orderUtils";
+import AlertModal from "./AlertModal";
 import "./Booking.css";
 
 const categoryIcons = {
@@ -24,6 +25,15 @@ export default function Booking() {
   const [autoReorderStarted, setAutoReorderStarted] = useState(false);
   const [searchParams] = useSearchParams();
   const resetTimer = useRef(null);
+
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoCloseTime: null
+  });
 
   // IMAGE MAPPING FOR FOOD ITEMS (fallback only)
   const getIcon = (name) => {
@@ -122,20 +132,6 @@ export default function Booking() {
     savePhoneToStorage(phone);
   }, [phone]);
 
-  // eslint-disable-next-line no-use-before-define
-  useEffect(() => {
-    if (!shouldAutoReorder || autoReorderStarted || cart.length === 0 || !name || !phone) return;
-    generateBill();
-    setAutoReorderStarted(true);
-  }, [shouldAutoReorder, autoReorderStarted, cart, name, phone, generateBill]); // eslint-disable-line no-use-before-define
-
-  // eslint-disable-next-line no-use-before-define
-  useEffect(() => {
-    if (!shouldAutoReorder || !autoReorderStarted || !bill) return;
-    confirmOrder();
-    setShouldAutoReorder(false);
-  }, [shouldAutoReorder, autoReorderStarted, bill, confirmOrder]); // eslint-disable-line no-use-before-define
-
   useEffect(() => {
     return () => {
       if (resetTimer.current) {
@@ -145,6 +141,21 @@ export default function Booking() {
   }, []);
 
   const items = menuData[category] || [];
+
+  // Helper function to show alerts
+  const showAlert = (type, title, message, autoCloseTime = null) => {
+    setAlertModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      autoCloseTime
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   // 🛒 CART (same logic, using id internally)
   const addToCart = (item) => {
@@ -249,7 +260,7 @@ export default function Booking() {
 
   const generateBill = useCallback(async () => {
     if (!name || !phone || cart.length === 0) {
-      alert("Enter name, phone number & select items");
+      showAlert("warning", "Missing Information", "Please enter your name, phone number and select items before proceeding.");
       return;
     }
 
@@ -468,7 +479,7 @@ export default function Booking() {
       setSaved(true);
       clearCartStorage();
       setCart([]);
-      alert("Order confirmed! Returning to booking page in 10 seconds.");
+      showAlert("success", "Order Confirmed!", "Your order has been successfully placed. Returning to booking page in 10 seconds.", 10000);
 
       resetTimer.current = setTimeout(() => {
         setBill(null);
@@ -481,11 +492,22 @@ export default function Booking() {
       }, 10000);
     } catch (err) {
       console.error("Confirm order failed:", err);
-      alert(`Unable to confirm order: ${err?.message || err}`);
+      showAlert("error", "Order Failed", `Unable to confirm order: ${err?.message || err}`);
     }
   }, [bill, saveOrderWithRetry]);
 
+  // Auto-reorder effects (defined after functions to avoid temporal dead zone)
+  useEffect(() => {
+    if (!shouldAutoReorder || autoReorderStarted || cart.length === 0 || !name || !phone) return;
+    generateBill();
+    setAutoReorderStarted(true);
+  }, [shouldAutoReorder, autoReorderStarted, cart, name, phone, generateBill]);
 
+  useEffect(() => {
+    if (!shouldAutoReorder || !autoReorderStarted || !bill) return;
+    confirmOrder();
+    setShouldAutoReorder(false);
+  }, [shouldAutoReorder, autoReorderStarted, bill, confirmOrder]);
 
   return (
     <div className="container py-4 booking-page">
@@ -696,6 +718,14 @@ export default function Booking() {
         </div>
       )}
 
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+        onClose={closeAlert}
+        autoCloseTime={alertModal.autoCloseTime}
+      />
     </div>
   );
 }

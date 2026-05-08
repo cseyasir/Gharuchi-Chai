@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
 import { getOrCreateUserId } from "./orderUtils";
+import AlertModal from "./AlertModal";
 import "./MyOrders.css";
 
 const statusLabels = {
@@ -24,6 +25,30 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userId] = useState(getOrCreateUserId());
+
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+    autoCloseTime: null
+  });
+
+  // Helper function to show alerts
+  const showAlert = (type, title, message, autoCloseTime = null) => {
+    setAlertModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      autoCloseTime
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   const formatMonthlyOrderPrefix = () => {
     const now = new Date();
@@ -178,15 +203,17 @@ export default function MyOrders() {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItemsPayload);
       if (itemsError) {
         console.error("Failed to insert reorder items:", itemsError);
-        alert("Unable to add items to your reorder. Please contact support.");
+        showAlert("error", "Reorder Failed", "Unable to add items to your reorder. Please contact support.");
         return;
       }
 
-      alert(`Reorder placed successfully! Your new order ID is ${createdOrder.order_id}.`);
-      navigate(`/track/${encodeURIComponent(createdOrder.order_id)}`);
+      showAlert("success", "Reorder Successful!", `Your new order ID is ${createdOrder.order_id}. Redirecting to order tracking...`, 2000);
+      setTimeout(() => {
+        navigate(`/track/${encodeURIComponent(createdOrder.order_id)}`);
+      }, 2000);
     } catch (err) {
       console.error("Unexpected error during reorder:", err);
-      alert("An unexpected error occurred while placing the reorder.");
+      showAlert("error", "Reorder Error", "An unexpected error occurred while placing the reorder. Please try again.");
     }
   };
 
@@ -270,6 +297,15 @@ export default function MyOrders() {
           </div>
         </div>
       )}
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+        onClose={closeAlert}
+        autoCloseTime={alertModal.autoCloseTime}
+      />
     </div>
   );
 }

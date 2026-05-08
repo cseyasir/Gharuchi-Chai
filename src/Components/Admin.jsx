@@ -597,7 +597,7 @@ const deleteCategory = async (categoryName) => {
 
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.text("Zangulpora Devsar Kulgam", widthMm / 2, y, { align: "center" });
+    doc.text("Devsar Kulgam", widthMm / 2, y, { align: "center" });
     y += 5;
 
     doc.setFontSize(8);
