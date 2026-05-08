@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
-import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage } from "./orderUtils";
+import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage, getNameFromStorage, getPhoneFromStorage, saveNameToStorage, savePhoneToStorage } from "./orderUtils";
 import "./Booking.css";
 
 const categoryIcons = {
@@ -20,6 +20,9 @@ export default function Booking() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [bill, setBill] = useState(null);
+  const [shouldAutoReorder, setShouldAutoReorder] = useState(false);
+  const [autoReorderStarted, setAutoReorderStarted] = useState(false);
+  const [searchParams] = useSearchParams();
   const resetTimer = useRef(null);
 
   // IMAGE MAPPING FOR FOOD ITEMS (fallback only)
@@ -99,12 +102,39 @@ export default function Booking() {
   // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
   useEffect(() => {
     getOrCreateUserId();
+    setName(getNameFromStorage());
+    setPhone(getPhoneFromStorage());
     const storedCart = getCartFromStorage();
     if (storedCart.length > 0) {
       setCart(storedCart);
     }
+    if (searchParams.get("reorder") === "true") {
+      setShouldAutoReorder(true);
+    }
     fetchMenu();
-  }, [fetchMenu]);
+  }, [fetchMenu, searchParams]);
+
+  useEffect(() => {
+    saveNameToStorage(name);
+  }, [name]);
+
+  useEffect(() => {
+    savePhoneToStorage(phone);
+  }, [phone]);
+
+  // eslint-disable-next-line no-use-before-define
+  useEffect(() => {
+    if (!shouldAutoReorder || autoReorderStarted || cart.length === 0 || !name || !phone) return;
+    generateBill();
+    setAutoReorderStarted(true);
+  }, [shouldAutoReorder, autoReorderStarted, cart, name, phone, generateBill]); // eslint-disable-line no-use-before-define
+
+  // eslint-disable-next-line no-use-before-define
+  useEffect(() => {
+    if (!shouldAutoReorder || !autoReorderStarted || !bill) return;
+    confirmOrder();
+    setShouldAutoReorder(false);
+  }, [shouldAutoReorder, autoReorderStarted, bill, confirmOrder]); // eslint-disable-line no-use-before-define
 
   useEffect(() => {
     return () => {
@@ -189,11 +219,11 @@ export default function Booking() {
     return Number.isNaN(parsed) ? 1 : parsed + 1;
   };
 
-  const getNextOrderId = async () => {
+  const getNextOrderId = useCallback(async () => {
     const prefix = formatMonthlyOrderPrefix();
     const nextSequence = await getNextOrderSequence(prefix);
     return buildMonthlyOrderId(prefix, nextSequence);
-  };
+  }, []);
 
   const getISTTimestamp = () => {
     const parts = new Intl.DateTimeFormat("en-GB", {
@@ -217,7 +247,7 @@ export default function Booking() {
 
   const [saved, setSaved] = useState(false);
 
-  const generateBill = async () => {
+  const generateBill = useCallback(async () => {
     if (!name || !phone || cart.length === 0) {
       alert("Enter name, phone number & select items");
       return;
@@ -241,7 +271,7 @@ export default function Booking() {
 
     setBill(newBill);
     setSaved(false);
-  };
+  }, [name, phone, cart, total, getNextOrderId]);
 
   const clearCart = () => {
     if (cart.length === 0) return;
@@ -368,7 +398,7 @@ export default function Booking() {
     doc.save(`GarxechChai-Bill-${bill.id}.pdf`);
   };
 
-  const saveOrderWithRetry = async (payload, retries = 3) => {
+  const saveOrderWithRetry = useCallback(async (payload, retries = 3) => {
     for (let attempt = 1; attempt <= retries; attempt += 1) {
       const { data: order, error } = await supabase
         .from("orders")
@@ -396,9 +426,9 @@ export default function Booking() {
     }
 
     throw new Error("Unable to generate a unique order ID");
-  };
+  }, [bill, getNextOrderId]);
 
-  const confirmOrder = async () => {
+  const confirmOrder = useCallback(async () => {
     if (!bill) return;
 
     const orderPayload = {
@@ -453,7 +483,7 @@ export default function Booking() {
       console.error("Confirm order failed:", err);
       alert(`Unable to confirm order: ${err?.message || err}`);
     }
-  };
+  }, [bill, saveOrderWithRetry]);
 
 
 

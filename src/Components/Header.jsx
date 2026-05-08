@@ -1,14 +1,23 @@
 import React from "react";
 import "./header.css";
 import { Link } from "react-router-dom";
+import line from "./line.png"; // Ensure you have a line image at this path or update the path accordingly
+import logo from "./logo192.png"; // Ensure you have a logo image at this path or update the path accordingly
 export default function Header() {
   return (
     <nav className="navbar navbar-expand-lg custom-navbar px-4 px-lg-5">
 
       {/* LOGO */}
-      <Link to="/" className="navbar-brand d-flex align-items-center">
-        <span className="logo-icon">🍴</span>
-        <h1 className="m-0 logo-text">GarxechChai</h1>
+      <Link to="/" className="navbar-brand">
+        <img src={logo} alt="GarxechChai" className="logo-icon" />
+        <div className="logo-wrapper">
+    <span className="logo-text">
+  Garxech<span className="chai-text">Chai</span>
+</span>
+    
+    <img src={line} alt="" className="logo-curve" />
+  </div>
+      
      </Link>
 
       {/* TOGGLER */}

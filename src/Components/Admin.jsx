@@ -9,6 +9,7 @@ export default function Admin() {
   const [session, setSession] = useState(null);
   const [localAdmin, setLocalAdmin] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [menuItems, setMenuItems] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -19,11 +20,14 @@ export default function Admin() {
   const [editingItem, setEditingItem] = useState(null);
   const [editingValues, setEditingValues] = useState({ name: "", price: "", image_url: "" });
   const [notificationCount, setNotificationCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [popularCategoryFilter, setPopularCategoryFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStartDate, setOrderStartDate] = useState("");
   const [orderEndDate, setOrderEndDate] = useState("");
   const [salesRange, setSalesRange] = useState("3m");
+  const [customerPeriod, setCustomerPeriod] = useState("month");
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryIcon, setNewCategoryIcon] = useState("");
@@ -185,10 +189,19 @@ const deleteCategory = async (categoryName) => {
     const pendingOrders = ordersData?.filter(order => getOrderStatus(order) === 'pending').length || 0;
 
     const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString();
+    
     const todaySales = ordersData?.filter(order =>
       new Date(order.created_at).toDateString() === today &&
       getOrderStatus(order) === 'completed'
     ).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+
+    const yesterdaySales = ordersData?.filter(order =>
+      new Date(order.created_at).toDateString() === yesterday &&
+      getOrderStatus(order) === 'completed'
+    ).reduce((sum, order) => sum + (order.total || 0), 0) || 0;
+
+    const growthPercentage = yesterdaySales > 0 ? ((todaySales - yesterdaySales) / yesterdaySales) * 100 : 0;
 
     const monthlyTotals = [];
     const now = new Date();
@@ -215,6 +228,14 @@ const deleteCategory = async (categoryName) => {
       itemSales[item.item_name] = (itemSales[item.item_name] || 0) + item.qty;
     });
 
+    const categorySales = {};
+    Object.entries(itemSales).forEach(([itemName, qty]) => {
+      const item = menuItems.find(m => m.name === itemName);
+      if (item) {
+        categorySales[item.category] = (categorySales[item.category] || 0) + qty;
+      }
+    });
+
     const popularItems = Object.entries(itemSales)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
@@ -224,10 +245,13 @@ const deleteCategory = async (categoryName) => {
       completedOrders,
       pendingOrders,
       todaySales,
+      yesterdaySales,
+      growthPercentage,
       popularItems,
-      monthlyTotals
+      monthlyTotals,
+      categorySales
     });
-  }, [getOrderStatus]);
+  }, [getOrderStatus, menuItems]);
 
   const fetchFeedbacks = useCallback(async () => {
     const { data, error } = await supabase
@@ -244,35 +268,53 @@ const deleteCategory = async (categoryName) => {
   }, []);
 
   // Require admin session before loading any data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase.auth.getSession();
-      const local = localStorage.getItem(LOCAL_ADMIN_KEY) === "true";
-      if (!data?.session && !local) {
-        nav("/login");
-        return;
+      if (dataLoaded) return; // Prevent multiple loads
+
+      try {
+        const { data } = await supabase.auth.getSession();
+        const local = localStorage.getItem(LOCAL_ADMIN_KEY) === "true";
+        if (!data?.session && !local) {
+          nav("/login");
+          return;
+        }
+        setSession(data.session || null);
+        setLocalAdmin(local);
+
+        // Load data in parallel for better performance
+        await Promise.all([
+          fetchMenuItems(),
+          fetchOrders(),
+          fetchSalesData(),
+          fetchFeedbacks()
+        ]);
+
+        setDataLoaded(true);
+        setCheckingAuth(false);
+      } catch (error) {
+        console.error("Error loading admin data:", error);
+        setCheckingAuth(false);
       }
-      setSession(data.session || null);
-      setLocalAdmin(local);
-      await fetchMenuItems();
-      await fetchOrders();
-      await fetchSalesData();
-      await fetchFeedbacks();
-      setCheckingAuth(false);
     };
 
     init();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) nav("/login");
+      if (!session && !localStorage.getItem(LOCAL_ADMIN_KEY)) {
+        setDataLoaded(false); // Reset on logout
+        nav("/login");
+      }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [nav, fetchMenuItems, fetchOrders, fetchSalesData, fetchFeedbacks]);
+  }, [nav, dataLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const orderChannel = supabase
       .channel("orders-realtime")
@@ -550,7 +592,7 @@ const deleteCategory = async (categoryName) => {
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("GaruhChai", widthMm / 2, y, { align: "center" });
+    doc.text("GarxechChai", widthMm / 2, y, { align: "center" });
     y += 5;
 
     doc.setFontSize(7);
@@ -621,8 +663,36 @@ const deleteCategory = async (categoryName) => {
     doc.save(`POS-${order.order_id || order.id}.pdf`);
   };
 
+  const toggleNotifications = () => {
+    setShowNotifications((prev) => {
+      if (!prev) {
+        setNotificationCount(0);
+      }
+      return !prev;
+    });
+  };
+
   const clearNotifications = () => {
     setNotificationCount(0);
+    setShowNotifications(false);
+  };
+
+  const applyOrderFilters = () => {
+    const filtered = orders.filter(order => {
+      const search = orderSearch.trim().toLowerCase();
+      const phone = order.customer_phone?.toString() || "";
+      const matchesSearch = !search ||
+        order.order_id?.toString().toLowerCase().includes(search) ||
+        order.customer_name?.toLowerCase().includes(search) ||
+        phone.includes(search);
+      const orderDate = new Date(order.created_at);
+      const fromDate = orderStartDate ? new Date(orderStartDate) : null;
+      const toDate = orderEndDate ? new Date(orderEndDate) : null;
+      const matchesStart = !fromDate || orderDate >= fromDate;
+      const matchesEnd = !toDate || orderDate <= toDate;
+      return matchesSearch && matchesStart && matchesEnd;
+    });
+    setFilteredOrders(filtered);
   };
 
   const resetOrderFilters = () => {
@@ -685,30 +755,6 @@ const deleteCategory = async (categoryName) => {
     return salesData.monthlyTotals.slice(-3);
   };
 
-  const getPopularItemsForRange = () => {
-    const sourceOrders = orders.filter(order => {
-      if (salesRange === 'custom' && salesFromDate && salesToDate) {
-        const date = new Date(order.created_at);
-        return date >= new Date(salesFromDate) && date <= new Date(salesToDate);
-      }
-      const windowDays = salesRange === '1m' ? 30 : salesRange === '3m' ? 90 : salesRange === '1y' ? 365 : 365;
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - windowDays);
-      return new Date(order.created_at) >= cutoff;
-    });
-
-    const itemSales = {};
-    sourceOrders.forEach(order => {
-      order.order_items?.forEach(item => {
-        itemSales[item.item_name] = (itemSales[item.item_name] || 0) + item.qty;
-      });
-    });
-
-    return Object.entries(itemSales)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5);
-  };
-
   const chartData = (() => {
     const data = getSalesChartData();
     return data.length ? data : [{ label: 'No data', total: 0 }];
@@ -731,6 +777,33 @@ const deleteCategory = async (categoryName) => {
     return { width, height, padding, points, linePath, areaPath, maxValue };
   };
 
+  const buildPieChart = (data, width = 200, height = 200) => {
+    const total = Object.values(data).reduce((sum, val) => sum + val, 0);
+    if (total === 0) return { paths: [], labels: [] };
+
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    let cumulative = 0;
+    const paths = [];
+    const labels = [];
+
+    Object.entries(data).forEach(([key, value], index) => {
+      const startAngle = (cumulative / total) * 2 * Math.PI;
+      cumulative += value;
+      const endAngle = (cumulative / total) * 2 * Math.PI;
+      const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+      const x1 = width / 2 + (width / 2) * Math.cos(startAngle);
+      const y1 = height / 2 + (height / 2) * Math.sin(startAngle);
+      const x2 = width / 2 + (width / 2) * Math.cos(endAngle);
+      const y2 = height / 2 + (height / 2) * Math.sin(endAngle);
+      const path = `M ${width / 2} ${height / 2} L ${x1} ${y1} A ${width / 2} ${height / 2} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+      const percent = total ? (value / total) * 100 : 0;
+      paths.push({ path, color: colors[index % colors.length], label: key, value, percent });
+      labels.push({ label: key, value, percent, color: colors[index % colors.length] });
+    });
+
+    return { paths, labels, total };
+  };
+
   const totalMenus = menuItems.length;
   const totalOrders = orders.length;
   const uniqueClients = new Set(
@@ -744,6 +817,17 @@ const deleteCategory = async (categoryName) => {
   const recentOrders = orders.slice(0, 4);
   const recentFeedbacks = feedbacks.slice(0, 4);
   const feedbackCount = feedbacks.length;
+  const pendingNotifications = orders.filter(order => {
+    const status = getOrderStatus(order);
+    return !status || status === 'pending';
+  });
+
+  const defaultCategories = ["tea", "meal", "juice", "roaster"];
+  const categoryOptions = Array.from(new Set([
+    ...defaultCategories,
+    ...categories.map(cat => typeof cat === 'string' ? cat : cat.name),
+    ...menuItems.map(item => item.category || "")
+  ].filter(Boolean))).sort();
 
   const itemImageMap = menuItems.reduce((map, item) => {
     if (item.image_url) map[item.name] = item.image_url;
@@ -757,6 +841,24 @@ const deleteCategory = async (categoryName) => {
     });
     return acc;
   }, {});
+
+  const itemCategoryMap = menuItems.reduce((map, item) => {
+    if (item.name) map[item.name] = item.category || "other";
+    return map;
+  }, {});
+
+  const popularCategoryOptions = ["all", ...categoryOptions];
+
+  const customerFavoriteItems = Object.entries(itemSales)
+    .filter(([itemName]) => popularCategoryFilter === "all" || itemCategoryMap[itemName] === popularCategoryFilter)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6)
+    .map(([item, qty]) => ({
+      item,
+      qty,
+      category: itemCategoryMap[item] || "other",
+      image: itemImageMap[item] || "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=500&q=80"
+    }));
 
   const popularItems = Object.entries(itemSales)
     .sort(([, a], [, b]) => b - a)
@@ -772,88 +874,158 @@ const deleteCategory = async (categoryName) => {
     sales: entry.qty * 12,
   }));
 
-  const mostSellingItems = popularItems.slice(0, 5);
+  const getCustomerPeriodStart = () => {
+    const now = new Date();
+    if (customerPeriod === "month") {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    if (customerPeriod === "quarter") {
+      const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+      return new Date(now.getFullYear(), quarterStartMonth, 1);
+    }
+    if (customerPeriod === "year") {
+      return new Date(now.getFullYear(), 0, 1);
+    }
+    return new Date(0);
+  };
 
-  const defaultCategories = ["tea", "meal", "juice", "roaster"];
-  const categoryOptions = Array.from(new Set([
-    ...defaultCategories,
-    ...categories.map(cat => typeof cat === 'string' ? cat : cat.name),
-    ...menuItems.map(item => item.category || "")
-  ].filter(Boolean))).sort();
+  const topCustomers = Object.entries(
+    orders.reduce((acc, order) => {
+      const createdAt = new Date(order.created_at);
+      const startDate = getCustomerPeriodStart();
+      if (isNaN(createdAt) || createdAt < startDate) return acc;
 
-  if (checkingAuth) {
+      const customerKey = order.customer_phone?.toString().trim() || order.customer_name?.trim() || `Guest-${order.id || order.order_id || 'unknown'}`;
+      const customerName = order.customer_name?.trim() || order.customer_phone?.toString() || 'Guest';
+      if (!acc[customerKey]) {
+        acc[customerKey] = {
+          customerKey,
+          customerName,
+          customerPhone: order.customer_phone || "-",
+          orderCount: 0,
+          totalSpent: 0,
+        };
+      }
+      acc[customerKey].orderCount += 1;
+      acc[customerKey].totalSpent += Number(order.total || 0);
+      return acc;
+    }, {})
+  )
+    .sort(([, a], [, b]) => b.orderCount - a.orderCount || b.totalSpent - a.totalSpent)
+    .slice(0, 5)
+    .map(([, customerData]) => customerData);
+
+  if (checkingAuth || !dataLoaded) {
     return (
       <div className="container py-4">
-        <div className="alert alert-secondary">Loading admin dashboard...</div>
+        <div className="alert alert-secondary text-center">
+          <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+          Loading admin dashboard...
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2>Admin Dashboard</h2>
-          {session?.user?.email ? (
-            <div className="text-muted">Signed in as {session.user.email}</div>
-          ) : localAdmin ? (
-            <div className="text-muted">Signed in as Admin</div>
-          ) : null}
-        </div>
-        <div className="d-flex gap-2 align-items-center">
-          <button className="btn btn-danger" onClick={signOut}>
-            Logout
-          </button>
-          <button
-            className="btn btn-outline-primary position-relative"
-            onClick={clearNotifications}
-          >
-            🔔 Notifications
-            {notificationCount > 0 && (
-              <span className="badge bg-danger position-absolute top-0 start-100 translate-middle">
-                {notificationCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+      <div className="row g-4">
+        <div className="col-xl-3">
+          <div className="card admin-sidebar h-100 p-3 position-relative">
+            <div className="admin-sidebar-header mb-4">
+              <h5 className="mb-1">Admin Panel</h5>
+              {session?.user?.email ? (
+                <div className="text-muted small">{session.user.email}</div>
+              ) : localAdmin ? (
+                <div className="text-muted small">Signed in as Admin</div>
+              ) : null}
+            </div>
 
-      {/* Navigation Tabs */}
-      <ul className="nav nav-tabs mb-4">
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            Dashboard
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'menu' ? 'active' : ''}`}
-            onClick={() => setActiveTab('menu')}
-          >
-            Menu Management
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            Orders {orders.filter(o => !o.status || o.status === 'pending').length > 0 &&
-              <span className="badge bg-warning ms-1">New</span>}
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            Analytics
-          </button>
-        </li>
-      </ul>
+            <div className="list-group admin-sidebar-nav mb-4">
+              <button
+                className={`list-group-item list-group-item-action ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                Dashboard
+              </button>
+              <button
+                className={`list-group-item list-group-item-action ${activeTab === 'menu' ? 'active' : ''}`}
+                onClick={() => setActiveTab('menu')}
+              >
+                Menu Management
+              </button>
+              <button
+                className={`list-group-item list-group-item-action ${activeTab === 'orders' ? 'active' : ''}`}
+                onClick={() => setActiveTab('orders')}
+              >
+                Orders {orders.filter(o => !o.status || o.status === 'pending').length > 0 &&
+                  <span className="badge bg-warning ms-1">New</span>}
+              </button>
+              <button
+                className={`list-group-item list-group-item-action ${activeTab === 'analytics' ? 'active' : ''}`}
+                onClick={() => setActiveTab('analytics')}
+              >
+                Analytics
+              </button>
+            </div>
+
+            <div className="d-grid gap-2 mb-4">
+              <button className="btn btn-danger" onClick={signOut}>
+                Logout
+              </button>
+              <div className="notification-wrapper">
+                <button className="btn btn-outline-primary position-relative" onClick={toggleNotifications}>
+                  🔔 Notifications
+                  {notificationCount > 0 && (
+                    <span className="badge bg-danger position-absolute top-0 start-100 translate-middle">
+                      {notificationCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="card notification-panel p-3">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <div>
+                        <strong>Notifications</strong>
+                        <div className="small text-muted">New order alerts</div>
+                      </div>
+                      <button className="btn btn-sm btn-outline-secondary" onClick={clearNotifications}>
+                        Close
+                      </button>
+                    </div>
+                    {pendingNotifications.length === 0 ? (
+                      <p className="text-muted mb-0">No new notifications.</p>
+                    ) : (
+                      <div className="list-group">
+                        {pendingNotifications.slice(0, 6).map(order => (
+                          <div key={order.id || order.order_id} className="list-group-item notification-item">
+                            <div className="d-flex justify-content-between align-items-start">
+                              <div>
+                                <strong>{order.order_id || order.id}</strong>
+                                <div className="notification-time">
+                                  {order.customer_name || 'Guest'} · {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <span className="badge bg-warning">Pending</span>
+                            </div>
+                            <div className="small text-muted mt-2">₹{order.total || 0}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+          </div>
+          </div>
+          </div>
+        </div>
+
+        <div className="col-xl-9">
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h2>Admin Dashboard</h2>
+            </div>
+          </div>
 
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
@@ -881,6 +1053,60 @@ const deleteCategory = async (categoryName) => {
               <div className="card admin-summary-card text-center p-3">
                 <div className="admin-summary-value">{uniqueClients}</div>
                 <div className="admin-summary-label">Total Clients</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-12">
+              <div className="card dashboard-card customer-insights-card p-3">
+                <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
+                  <div>
+                    <h5 className="mb-1">Top Customers</h5>
+                    <p className="text-muted mb-0">Most active customers this {customerPeriod}.</p>
+                  </div>
+                  <div className="btn-group btn-group-sm customer-period-pill-group">
+                    {['month', 'quarter', 'year'].map(period => (
+                      <button
+                        key={period}
+                        type="button"
+                        className={`btn ${customerPeriod === period ? 'btn-primary' : 'btn-outline-secondary'}`}
+                        onClick={() => setCustomerPeriod(period)}
+                      >
+                        {period === 'month' ? 'Monthly' : period === 'quarter' ? 'Quarterly' : 'Yearly'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {topCustomers.length > 0 ? (
+                  <div className="row g-3">
+                    {topCustomers.map((customer) => (
+                      <div key={customer.customerKey} className="col-md-4">
+                        <div className="card dashboard-metric-card h-100">
+                          <div className="metric-label">{customer.customerName}</div>
+                          <div className="fs-4 fw-bold">{customer.orderCount} orders</div>
+                          <div className="text-muted small">Spent ₹{customer.totalSpent.toFixed(0)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted mb-0">No customers have ordered during this period.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="row g-3 mb-4">
+            <div className="col-md-6">
+              <div className="card admin-summary-card text-center p-3">
+                <div className="admin-summary-value">₹{salesData.todaySales?.toFixed(0)}</div>
+                <div className="admin-summary-label">Today's Sales</div>
+                <div className={`mt-2 ${salesData.growthPercentage >= 0 ? 'text-success' : 'text-danger'}`}>
+                  <small>
+                    {salesData.growthPercentage >= 0 ? '↗' : '↘'} {Math.abs(salesData.growthPercentage).toFixed(1)}% vs yesterday
+                  </small>
+                </div>
               </div>
             </div>
           </div>
@@ -1058,14 +1284,61 @@ const deleteCategory = async (categoryName) => {
             <div className="col-lg-4">
               <div className="card dashboard-card">
                 <div className="card-body">
-                  <h5 className="mb-3">Popular Items</h5>
-                  {getPopularItemsForRange().map(([item, qty], index) => (
-                    <div key={index} className="d-flex justify-content-between align-items-center mb-3">
-                      <div>{item}</div>
-                      <div className="text-secondary">{qty}</div>
+                  <div className="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+                    <div>
+                      <h5 className="mb-1">Popular Items</h5>
+                      <p className="text-muted mb-0">Most ordered items customers love.</p>
                     </div>
-                  ))}
-                  {getPopularItemsForRange().length === 0 && <p className="text-muted">No item data available.</p>}
+                    <select
+                      className="form-select form-select-sm w-auto"
+                      value={popularCategoryFilter}
+                      onChange={(e) => setPopularCategoryFilter(e.target.value)}
+                    >
+                      {popularCategoryOptions.map((category) => (
+                        <option key={category} value={category}>
+                          {category === 'all' ? 'All categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {customerFavoriteItems.length > 0 ? (
+                    customerFavoriteItems.map((item, index) => (
+                      <div key={item.item} className="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                          <strong>{item.item}</strong>
+                          <div className="small text-muted">{item.category}</div>
+                        </div>
+                        <div className="text-secondary">{item.qty}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted">No item data found for this category.</p>
+                  )}
+
+                  {/* Pie Chart for Category Distribution */}
+                  <hr />
+                  <h6>Category Distribution</h6>
+                  {(() => {
+                    const pieData = buildPieChart(salesData.categorySales || {});
+                    return (
+                      <div className="pie-chart-container">
+                        <svg viewBox="0 0 200 200" className="pie-chart-svg">
+                          {pieData.paths.map((slice, index) => (
+                            <path key={index} d={slice.path} fill={slice.color} />
+                          ))}
+                        </svg>
+                        <div className="pie-chart-legend">
+                          {pieData.labels.slice(0, 4).map((label, index) => (
+                            <div key={index} className="legend-item d-flex align-items-center mb-1">
+                              <div className="legend-color" style={{ backgroundColor: label.color, width: 10, height: 10, marginRight: 6 }}></div>
+                              <small>{label.label}: {label.value} ({label.percent.toFixed(0)}%)</small>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1335,7 +1608,7 @@ const deleteCategory = async (categoryName) => {
                     />
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className="form-label">From date</label>
                   <div className="input-group">
                     <span className="input-group-text">📅</span>
@@ -1347,7 +1620,7 @@ const deleteCategory = async (categoryName) => {
                     />
                   </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-md-2">
                   <label className="form-label">To date</label>
                   <div className="input-group">
                     <span className="input-group-text">📅</span>
@@ -1358,6 +1631,11 @@ const deleteCategory = async (categoryName) => {
                       onChange={(e) => setOrderEndDate(e.target.value)}
                     />
                   </div>
+                </div>
+                <div className="col-md-2 d-grid">
+                  <button className="btn btn-primary" onClick={applyOrderFilters}>
+                    Apply filters
+                  </button>
                 </div>
                 <div className="col-md-2 d-grid">
                   <button className="btn btn-outline-secondary" onClick={resetOrderFilters}>
@@ -1439,9 +1717,18 @@ const deleteCategory = async (categoryName) => {
               <h4>Analytics</h4>
               <p className="text-muted">Restaurant summary with sales, item trends and customer feedback.</p>
             </div>
-            <button className="btn btn-outline-secondary btn-sm">
-              Filter Period
-            </button>
+            <div className="btn-group btn-group-sm">
+              {['1m', '3m', '1y'].map(period => (
+                <button
+                  key={period}
+                  type="button"
+                  className={`btn ${salesRange === period ? 'btn-primary' : 'btn-outline-secondary'}`}
+                  onClick={() => setSalesRange(period)}
+                >
+                  {period === '1m' ? '1M' : period === '3m' ? '3M' : '1Y'}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="row g-3 mb-4">
@@ -1584,7 +1871,7 @@ const deleteCategory = async (categoryName) => {
             <div className="col-lg-4">
               <div className="card analytics-card">
                 <div className="card-header d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0">Most Selling Items</h5>
+                  <h5 className="mb-0">Category Sales Distribution</h5>
                   <div className="btn-group btn-group-sm">
                     <button className="btn btn-outline-secondary">Monthly</button>
                     <button className="btn btn-outline-secondary">Weekly</button>
@@ -1592,22 +1879,35 @@ const deleteCategory = async (categoryName) => {
                   </div>
                 </div>
                 <div className="card-body">
-                  {mostSellingItems.map((item, index) => (
-                    <div key={item.item} className="most-selling-item d-flex justify-content-between align-items-center mb-3">
-                      <div>
-                        <strong>{item.item}</strong>
-                        <div className="small text-muted">{item.qty} orders</div>
+                  {(() => {
+                    const pieData = buildPieChart(salesData.categorySales || {});
+                    return (
+                      <div className="pie-chart-container">
+                        <svg viewBox="0 0 200 200" className="pie-chart-svg">
+                          {pieData.paths.map((slice, index) => (
+                            <path key={index} d={slice.path} fill={slice.color} />
+                          ))}
+                        </svg>
+                        <div className="pie-chart-legend">
+                          {pieData.labels.map((label, index) => (
+                            <div key={index} className="legend-item d-flex align-items-center mb-2">
+                              <div className="legend-color" style={{ backgroundColor: label.color, width: 12, height: 12, marginRight: 8 }}></div>
+                              <span>{label.label}: {label.value} ({label.percent.toFixed(0)}%)</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="text-primary">₹{(item.qty * 10).toFixed(2)}</div>
-                    </div>
-                  ))}
-                  {mostSellingItems.length === 0 && <p className="text-muted">No selling items available yet.</p>}
+                    );
+                  })()}
+                  {(!salesData.categorySales || Object.keys(salesData.categorySales).length === 0) && <p className="text-muted">No category data available yet.</p>}
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+    </div>
+    </div>
     </div>
   );
 }

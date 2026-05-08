@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
-import { getOrCreateUserId, saveCartToStorage } from "./orderUtils";
+import { getOrCreateUserId } from "./orderUtils";
 import "./MyOrders.css";
 
 const statusLabels = {
@@ -24,6 +24,92 @@ export default function MyOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [userId] = useState(getOrCreateUserId());
+
+  const formatMonthlyOrderPrefix = () => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear()).slice(-2);
+    return `${month}${year}`;
+  };
+
+  const buildMonthlyOrderId = (prefix, sequence) => {
+    return `${prefix}${String(sequence).padStart(2, "0")}`;
+  };
+
+  const getNextOrderSequence = async (prefix) => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("order_id")
+      .like("order_id", `${prefix}%`)
+      .order("order_id", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Order ID lookup failed:", error);
+      return 1;
+    }
+
+    if (!data || data.length === 0) {
+      return 1;
+    }
+
+    const latest = data[0].order_id || "";
+    const suffix = latest.slice(prefix.length);
+    const parsed = parseInt(suffix, 10);
+    return Number.isNaN(parsed) ? 1 : parsed + 1;
+  };
+
+  const getNextOrderId = async () => {
+    const prefix = formatMonthlyOrderPrefix();
+    const nextSequence = await getNextOrderSequence(prefix);
+    return buildMonthlyOrderId(prefix, nextSequence);
+  };
+
+  const saveOrderWithRetry = async (payload, retries = 3) => {
+    for (let attempt = 1; attempt <= retries; attempt += 1) {
+      const { data: createdOrder, error } = await supabase
+        .from("orders")
+        .insert([payload])
+        .select()
+        .single();
+
+      if (!error && createdOrder) {
+        return createdOrder;
+      }
+
+      const duplicateError = error?.message?.toLowerCase()?.includes("duplicate") ||
+        error?.details?.toLowerCase?.includes("duplicate") ||
+        error?.message?.toLowerCase()?.includes("unique");
+
+      if (!duplicateError || attempt === retries) {
+        throw error || new Error("Order save failed");
+      }
+
+      payload.order_id = await getNextOrderId();
+    }
+
+    throw new Error("Unable to generate a unique order ID");
+  };
+
+  const getISTTimestamp = () => {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).formatToParts(new Date());
+
+    const values = {};
+    parts.forEach(({ type, value }) => {
+      if (type !== "literal") values[type] = value;
+    });
+
+    return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}:${values.second}+05:30`;
+  };
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -50,21 +136,58 @@ export default function MyOrders() {
     fetchOrders();
   }, [userId, fetchOrders]);
 
-  const handleReorder = (order) => {
+  const handleReorder = async (order) => {
     if (!order?.order_items?.length) {
       alert("This order has no items to reorder.");
       return;
     }
 
-    const reorderCart = order.order_items.map(item => ({
-      id: item.id ? item.id : `${item.item_name}-${item.price}`,
-      name: item.item_name,
+    if (!order.customer_name || !order.customer_phone) {
+      alert("Cannot auto-reorder because customer name or phone is missing from the previous order.");
+      return;
+    }
+
+    const orderItems = order.order_items.map(item => ({
+      item_name: item.item_name || item.name,
       qty: item.qty || 1,
       price: item.price || 0
     }));
 
-    saveCartToStorage(reorderCart);
-    navigate("/booking");
+    const orderTotal = orderItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+    const orderPayload = {
+      order_id: await getNextOrderId(),
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone?.toString(),
+      user_id: getOrCreateUserId(),
+      total: orderTotal,
+      status: "pending",
+      created_at: getISTTimestamp()
+    };
+
+    try {
+      const createdOrder = await saveOrderWithRetry(orderPayload);
+
+      const orderItemsPayload = orderItems.map(item => ({
+        order_ref: createdOrder.id,
+        item_name: item.item_name,
+        qty: item.qty,
+        price: item.price
+      }));
+
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItemsPayload);
+      if (itemsError) {
+        console.error("Failed to insert reorder items:", itemsError);
+        alert("Unable to add items to your reorder. Please contact support.");
+        return;
+      }
+
+      alert(`Reorder placed successfully! Your new order ID is ${createdOrder.order_id}.`);
+      navigate(`/track/${encodeURIComponent(createdOrder.order_id)}`);
+    } catch (err) {
+      console.error("Unexpected error during reorder:", err);
+      alert("An unexpected error occurred while placing the reorder.");
+    }
   };
 
   return (

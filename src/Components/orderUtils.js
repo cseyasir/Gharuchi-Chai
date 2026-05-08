@@ -1,6 +1,7 @@
 const USER_ID_STORAGE_KEY = "garuchhai_user_id";
 const CART_STORAGE_KEY = "garuchhai_cart";
 const USER_PHONE_STORAGE_KEY = "garuchhai_user_phone";
+const USER_NAME_STORAGE_KEY = "garuchhai_user_name";
 
 export const getOrCreateUserId = () => {
   if (typeof window === "undefined") return null;
@@ -53,6 +54,29 @@ export const getPhoneFromStorage = () => {
     return localStorage.getItem(USER_PHONE_STORAGE_KEY) || "";
   } catch (error) {
     console.error("Error reading phone from storage:", error);
+    return "";
+  }
+};
+
+export const saveNameToStorage = (name) => {
+  if (typeof window === "undefined") return;
+  try {
+    if (!name) {
+      localStorage.removeItem(USER_NAME_STORAGE_KEY);
+    } else {
+      localStorage.setItem(USER_NAME_STORAGE_KEY, name);
+    }
+  } catch (error) {
+    console.error("Error saving name to storage:", error);
+  }
+};
+
+export const getNameFromStorage = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(USER_NAME_STORAGE_KEY) || "";
+  } catch (error) {
+    console.error("Error reading name from storage:", error);
     return "";
   }
 };

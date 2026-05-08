@@ -20,12 +20,110 @@
   margin: 0 10px;
   font-weight: 500;
 }
+.logo-icon {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: 10px;
+}
 
 .navbar-nav .nav-link.active,
 .navbar-nav .nav-link:hover {
   color: #fea116;
 }
 
+/* TOGGLER ICON 
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.5%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='m4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+  */
+
+/* TOGGLER ICON */
+.navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255,255,255,1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2.5' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+.navbar-toggler {
+  border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: none;
+}
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+}
+
+/* LOGO */
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  margin-right: -2px;
+}
+
+/* WRAPPER */
+.logo-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* TEXT */
+.logo-text {
+  color: #fea116;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.3px;
+}
+
+/* CURVED LINE */
+.logo-curve {
+  width: 180px;
+  margin-top: -2px;
+}
+.chai-text {
+  color: #7cb342;
+}
+/* NAVBAR TOGGLER BUTTON */
+.navbar-toggler {
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* REMOVE DARK DEFAULT ICON */
+.navbar-toggler-icon {
+  background-image: none !important;
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+/* CUSTOM WHITE LINES */
+.navbar-toggler-icon::before,
+.navbar-toggler-icon::after,
+.navbar-toggler-icon div {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 24px;
+  height: 2.5px;
+  background-color: white;
+  border-radius: 10px;
+}
+
+.navbar-toggler-icon::before {
+  top: 5px;
+}
+
+.navbar-toggler-icon div {
+  top: 11px;
+}
+
+.navbar-toggler-icon::after {
+  top: 17px;
+}
 /* BUTTON */
 .book-btn {
   background: #fea116;
