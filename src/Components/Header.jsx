@@ -39,7 +39,10 @@ export default function Header() {
           <Link to="/contact" className="nav-item nav-link">Contact</Link>
         </div>
 
-        {/* BUTTON */}
+        {/* BUTTONS */}
+        <a href="/app-release.apk" download="app-release.apk" className="btn btn-success px-4 py-2 ms-lg-3">
+          Download App
+        </a>
         <Link to="/booking" className="btn btn-warning px-4 py-2 ms-lg-3 book-btn">
           Book Our Service
         </Link>

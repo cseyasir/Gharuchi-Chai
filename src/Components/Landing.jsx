@@ -67,6 +67,9 @@ export default function Landing() {
                 <a href="#menu" className="btn btn-outline-light btn-lg hero-btn">
                   View Menu
                 </a>
+                <a href="/app-release.apk" className="btn btn-success btn-lg hero-btn" download="app-release.apk">
+                  Download App
+                </a>
               </div>
             </div>
             <div className="col-lg-6 mt-4 mt-lg-0">
