@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
+import DeliveryMap from "./DeliveryMap";
 import "./Admin.css";
 
 export default function Admin() {
@@ -578,6 +579,7 @@ const deleteCategory = async (categoryName) => {
       + 4  // date line
       + 4  // customer line
       + 6  // phone line
+      + (order.delivery_address ? 8 : 0)
       + 6  // divider
       + 4  // header row
       + 5  // header divider
@@ -622,6 +624,12 @@ const deleteCategory = async (categoryName) => {
 
     doc.text(`Phone: ${order.customer_phone || "-"}`, left, y);
     y += 6;
+
+    if (order.delivery_address) {
+      const locationLines = doc.splitTextToSize(`Delivery: ${order.delivery_address}`, widthMm - (left * 2));
+      doc.text(locationLines, left, y);
+      y += (locationLines.length * lineHeight) + 2;
+    }
 
     doc.line(left, y, widthMm - left, y);
     y += 6;
@@ -1658,6 +1666,25 @@ const deleteCategory = async (categoryName) => {
                   <div className="card-body">
                     <p><strong>Customer:</strong> {order.customer_name}</p>
                     <p><strong>Phone:</strong> {order.customer_phone || "-"}</p>
+                    <p><strong>Delivery Location:</strong> {order.delivery_address || "Not provided"}</p>
+                    {order.delivery_latitude != null && order.delivery_longitude != null && (
+                      <>
+                        <p className="small text-muted">
+                        Coordinates: {Number(order.delivery_latitude).toFixed(6)}, {Number(order.delivery_longitude).toFixed(6)}{" "}
+                        <a
+                          href={`https://www.google.com/maps?q=${order.delivery_latitude},${order.delivery_longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open map
+                        </a>
+                        </p>
+                        <DeliveryMap
+                          position={[Number(order.delivery_latitude), Number(order.delivery_longitude)]}
+                          className="admin-order-location-map"
+                        />
+                      </>
+                    )}
                     <p><strong>Total:</strong> ₹{order.total}</p>
                     <p><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</p>
 

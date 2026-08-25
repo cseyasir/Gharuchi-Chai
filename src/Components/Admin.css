@@ -249,6 +249,18 @@
   font-weight: 700;
 }
 
+.admin-order-location-map {
+  width: 100%;
+  height: 220px;
+  border-radius: 12px;
+  margin: 10px 0 16px;
+}
+
+.admin-order-location-map .delivery-map {
+  height: 220px;
+  border-radius: 12px;
+}
+
 .analytics-card {
   border-radius: 22px;
   border: none;

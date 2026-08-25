@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
 import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage, getNameFromStorage, getPhoneFromStorage, saveNameToStorage, savePhoneToStorage } from "./orderUtils";
 import AlertModal from "./AlertModal";
+import DeliveryMap from "./DeliveryMap";
 import "./Booking.css";
 
 const categoryIcons = {
@@ -13,6 +14,10 @@ const categoryIcons = {
   roaster: "🍖"
 };
 
+const LOCATION_PERMISSION_ASKED_KEY = "garuchhai_location_permission_asked";
+const CURRENT_LOCATION_STORAGE_KEY = "garuchhai_current_location";
+const SHOP_LOCATION = [33.636417, 75.064694];
+
 export default function Booking() {
   const [menuData, setMenuData] = useState({});
   const [categories, setCategories] = useState([]);
@@ -20,11 +25,18 @@ export default function Booking() {
   const [cart, setCart] = useState([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [useDeliveryLocation, setUseDeliveryLocation] = useState(false);
+  const [deliveryLocation, setDeliveryLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [mapPosition, setMapPosition] = useState(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const [bill, setBill] = useState(null);
   const [shouldAutoReorder, setShouldAutoReorder] = useState(false);
   const [autoReorderStarted, setAutoReorderStarted] = useState(false);
   const [searchParams] = useSearchParams();
   const resetTimer = useRef(null);
+  const customDeliveryLocationRef = useRef(false);
 
   // Alert modal state
   const [alertModal, setAlertModal] = useState({
@@ -109,6 +121,29 @@ export default function Booking() {
     }
   }, [category]);
 
+  const saveBrowserLocation = async (coords) => {
+    const position = [coords.latitude, coords.longitude];
+    let address = "Current browser location";
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${position[0]}&lon=${position[1]}`
+      );
+      if (response.ok) {
+        const result = await response.json();
+        address = result.display_name || address;
+      }
+    } catch (error) {
+      console.error("Reverse geocoding failed:", error);
+    }
+    const savedLocation = { address, latitude: position[0], longitude: position[1] };
+    localStorage.setItem(CURRENT_LOCATION_STORAGE_KEY, JSON.stringify(savedLocation));
+    setCurrentLocation(savedLocation);
+    if (!customDeliveryLocationRef.current) {
+      setMapPosition(position);
+      setDeliveryLocation(savedLocation);
+    }
+  };
+
   // 🔥 FETCH MENU FROM DB (ONLY CHANGE)
   useEffect(() => {
     getOrCreateUserId();
@@ -125,12 +160,111 @@ export default function Booking() {
   }, [fetchMenu, searchParams]);
 
   useEffect(() => {
+    const storedLocation = localStorage.getItem(CURRENT_LOCATION_STORAGE_KEY);
+    if (storedLocation) {
+      try {
+        const parsedLocation = JSON.parse(storedLocation);
+        if (parsedLocation?.latitude != null && parsedLocation?.longitude != null) {
+          setCurrentLocation(parsedLocation);
+          setDeliveryLocation(parsedLocation);
+          setMapPosition([parsedLocation.latitude, parsedLocation.longitude]);
+        }
+      } catch (error) {
+        localStorage.removeItem(CURRENT_LOCATION_STORAGE_KEY);
+      }
+    }
+
+    if (!navigator.geolocation) return;
+
+    localStorage.setItem(LOCATION_PERMISSION_ASKED_KEY, "true");
+    const updateCurrentLocation = ({ coords }) => {
+      saveBrowserLocation(coords).finally(() => setLocationLoading(false));
+    };
+    const handleLocationError = () => setLocationLoading(false);
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(updateCurrentLocation, handleLocationError, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    });
+    const watchId = navigator.geolocation.watchPosition(updateCurrentLocation, handleLocationError, {
+      enableHighAccuracy: true,
+      maximumAge: 300000,
+      timeout: 30000
+    });
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
+
+  useEffect(() => {
     saveNameToStorage(name);
   }, [name]);
 
   useEffect(() => {
     savePhoneToStorage(phone);
   }, [phone]);
+
+  const fetchDeliveryLocation = () => {
+    if (mapPosition) {
+      setMapOpen(true);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setMapPosition(SHOP_LOCATION);
+      setMapOpen(true);
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      await saveBrowserLocation(coords);
+      setMapOpen(true);
+      setLocationLoading(false);
+    }, () => {
+      setMapPosition(SHOP_LOCATION);
+      setMapOpen(true);
+      setLocationLoading(false);
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 });
+  };
+
+  const toggleDeliveryLocation = (event) => {
+    const checked = event.target.checked;
+    customDeliveryLocationRef.current = checked;
+    setUseDeliveryLocation(checked);
+    if (checked) fetchDeliveryLocation();
+    else {
+      setMapPosition(currentLocation ? [currentLocation.latitude, currentLocation.longitude] : null);
+      setDeliveryLocation(currentLocation);
+    }
+  };
+
+  const confirmMapLocation = async () => {
+    if (!mapPosition) return;
+    let address = "Pinned delivery location";
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${mapPosition[0]}&lon=${mapPosition[1]}`
+      );
+      if (response.ok) {
+        const result = await response.json();
+        address = result.display_name || address;
+      }
+    } catch (error) {
+      console.error("Reverse geocoding failed:", error);
+    }
+    setDeliveryLocation({ address, latitude: mapPosition[0], longitude: mapPosition[1] });
+    customDeliveryLocationRef.current = true;
+    setUseDeliveryLocation(true);
+    setMapOpen(false);
+  };
+
+  const cancelMapLocation = () => {
+    setMapOpen(false);
+    customDeliveryLocationRef.current = Boolean(currentLocation);
+    setUseDeliveryLocation(Boolean(currentLocation));
+    setDeliveryLocation(currentLocation);
+  };
 
   useEffect(() => {
     return () => {
@@ -263,6 +397,10 @@ export default function Booking() {
       showAlert("warning", "Missing Information", "Please enter your name, phone number and select items before proceeding.");
       return;
     }
+    if (!deliveryLocation || locationLoading) {
+      showAlert("warning", "Delivery Location Needed", "Please allow location access or select your delivery location on the map.");
+      return;
+    }
 
     let orderId = `TEMP-${Date.now()}`;
     try {
@@ -275,6 +413,7 @@ export default function Booking() {
       id: orderId,
       name,
       phone,
+      deliveryLocation,
       items: cart,
       total,
       date: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
@@ -282,7 +421,7 @@ export default function Booking() {
 
     setBill(newBill);
     setSaved(false);
-  }, [name, phone, cart, total, getNextOrderId]);
+  }, [name, phone, deliveryLocation, locationLoading, cart, total, getNextOrderId]);
 
   const clearCart = () => {
     if (cart.length === 0) return;
@@ -453,6 +592,11 @@ export default function Booking() {
     if (bill.phone) {
       orderPayload.customer_phone = bill.phone;
     }
+    if (bill.deliveryLocation) {
+      orderPayload.delivery_address = bill.deliveryLocation.address;
+      orderPayload.delivery_latitude = bill.deliveryLocation.latitude;
+      orderPayload.delivery_longitude = bill.deliveryLocation.longitude;
+    }
 
     try {
       const order = await saveOrderWithRetry(orderPayload);
@@ -532,6 +676,20 @@ export default function Booking() {
           value={phone}
           onChange={e => setPhone(e.target.value)}
         />
+        <label className="delivery-location-option">
+          <input
+            type="checkbox"
+            className="delivery-location-toggle"
+            checked={useDeliveryLocation}
+            onChange={toggleDeliveryLocation}
+          />
+          <span>
+            <strong>{useDeliveryLocation ? "Change delivery location" : "Current location selected"}</strong>
+            <small>
+              {locationLoading ? "Finding your location..." : deliveryLocation?.address || "Allow location access to select your current location"}
+            </small>
+          </span>
+        </label>
       </div>
 
       <div className="category-tabs mb-4">
@@ -614,6 +772,25 @@ export default function Booking() {
         </div>
       )}
 
+      {mapOpen && mapPosition && (
+        <div className="modal-overlay">
+          <div className="location-modal">
+            <div className="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h4>Pin delivery location</h4>
+                <p className="text-muted mb-0">Move the pin to the exact place where we should deliver.</p>
+              </div>
+              <button type="button" className="close-btn" onClick={cancelMapLocation}>×</button>
+            </div>
+            <DeliveryMap position={mapPosition} onPositionChange={setMapPosition} interactive />
+            <div className="location-modal-actions">
+              <button type="button" className="btn btn-outline-secondary" onClick={cancelMapLocation}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={confirmMapLocation}>Use this location</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {bill && (
         <div className="modal-overlay">
           <div className="modal-box-pro">
@@ -643,6 +820,12 @@ export default function Booking() {
                 <strong>Phone</strong><br />
                 {bill.phone}
               </p>
+              {bill.deliveryLocation && (
+                <p className="bill-location">
+                  <strong>Delivery Location</strong><br />
+                  {bill.deliveryLocation.address}
+                </p>
+              )}
             </div>
 
             <table className="table bill-table">
