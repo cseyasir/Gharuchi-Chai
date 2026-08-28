@@ -265,6 +265,11 @@ export default function OrderStatus() {
               </div>
             </div>
 
+            <div className="mb-3">
+              <strong>Delivery Location</strong>
+              <p className="mb-1">{order.delivery_address || "-"}</p>
+            </div>
+
             <h6>Order Items</h6>
             <div className="table-responsive mb-3">
               <table className="table table-sm">

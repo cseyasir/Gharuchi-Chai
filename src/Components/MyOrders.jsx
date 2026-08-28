@@ -189,6 +189,15 @@ export default function MyOrders() {
       status: "pending",
       created_at: getISTTimestamp()
     };
+    if (order.delivery_address) {
+      orderPayload.delivery_address = order.delivery_address;
+    }
+    if (order.delivery_latitude != null) {
+      orderPayload.delivery_latitude = order.delivery_latitude;
+    }
+    if (order.delivery_longitude != null) {
+      orderPayload.delivery_longitude = order.delivery_longitude;
+    }
 
     try {
       const createdOrder = await saveOrderWithRetry(orderPayload);
@@ -258,6 +267,10 @@ export default function MyOrders() {
                     </div>
 
                     <div className="mb-3">
+                      <div className="mb-3">
+                        <strong>Delivery Location</strong>
+                        <p className="mb-0">{order.delivery_address || "-"}</p>
+                      </div>
                       <strong>Items</strong>
                       <div className="table-responsive mt-2">
                         <table className="table table-sm mb-0">

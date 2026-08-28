@@ -623,13 +623,13 @@ export default function Booking() {
       setSaved(true);
       clearCartStorage();
       setCart([]);
+      setName("");
+      setPhone("");
       showAlert("success", "Order Confirmed!", "Your order has been successfully placed. Returning to booking page in 10 seconds.", 10000);
 
       resetTimer.current = setTimeout(() => {
         setBill(null);
         setSaved(false);
-        setName("");
-        setPhone("");
         setCategory("tea");
         setCart([]);
         resetTimer.current = null;
@@ -783,6 +783,13 @@ export default function Booking() {
               <button type="button" className="close-btn" onClick={cancelMapLocation}>×</button>
             </div>
             <DeliveryMap position={mapPosition} onPositionChange={setMapPosition} interactive />
+            <div className="selected-location-summary">
+              <span className="selected-location-icon" aria-hidden="true">●</span>
+              <div>
+                <strong>Selected location</strong>
+                <p>{deliveryLocation?.address || "Location selected on map"}</p>
+              </div>
+            </div>
             <div className="location-modal-actions">
               <button type="button" className="btn btn-outline-secondary" onClick={cancelMapLocation}>Cancel</button>
               <button type="button" className="btn btn-primary" onClick={confirmMapLocation}>Use this location</button>

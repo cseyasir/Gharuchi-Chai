@@ -122,23 +122,126 @@
   border-radius: 14px;
   margin-top: 18px;
   z-index: 1;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(31, 41, 55, 0.12);
+  box-shadow: 0 14px 30px rgba(31, 41, 55, 0.14);
+  isolation: isolate;
+}
+
+.delivery-map-interactive::before {
+  content: "Drag the pin or tap the map to adjust";
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 500;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #374151;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 5px 16px rgba(31, 41, 55, 0.14);
+  pointer-events: none;
+}
+
+.delivery-map .leaflet-control-zoom {
+  margin: 14px 14px 0 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 5px 16px rgba(31, 41, 55, 0.18);
+}
+
+.delivery-map .leaflet-control-zoom a {
+  width: 34px;
+  height: 34px;
+  line-height: 32px;
+  border: 0;
+  color: #374151;
+  background: rgba(255, 255, 255, 0.94);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.delivery-map .leaflet-control-zoom a:hover {
+  color: #c2410c;
+  background: #fff7ed;
+}
+
+.delivery-map .leaflet-control-attribution {
+  padding: 3px 7px;
+  border-radius: 8px 0 0;
+  background: rgba(255, 255, 255, 0.82);
+  color: #6b7280;
+  font-size: 0.65rem;
 }
 
 .delivery-map-pin {
-  background: #ff6a00;
+  width: 32px !important;
+  height: 32px !important;
+  box-sizing: border-box;
   border: 3px solid #ffffff;
   border-radius: 50% 50% 50% 0;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, #fb923c 0%, #ea580c 100%);
+  box-shadow: 0 5px 12px rgba(124, 45, 18, 0.38);
   transform: rotate(-45deg);
+  transition: filter 0.2s ease, transform 0.2s ease;
 }
 
-.delivery-map-pin span {
+.delivery-map-pin:hover {
+  filter: brightness(1.08);
+  transform: rotate(-45deg) scale(1.05);
+}
+
+.delivery-map-pin-dot {
   display: block;
-  width: 6px;
-  height: 6px;
-  margin: 6px;
-  background: #ffffff;
+  width: 8px;
+  height: 8px;
+  margin: 9px;
   border-radius: 50%;
+  background: #ffffff;
+}
+
+.selected-location-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 13px 15px;
+  border: 1px solid #dcefe6;
+  border-radius: 14px;
+  background: #f5fbf7;
+  color: #1f2937;
+}
+
+.selected-location-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dff4e8;
+  color: #12945b;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.selected-location-summary strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.selected-location-summary p {
+  margin: 0;
+  color: #52635a;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .location-modal-actions {

@@ -5,9 +5,9 @@ import "leaflet/dist/leaflet.css";
 
 const pinIcon = L.divIcon({
   className: "delivery-map-pin",
-  html: "<span></span>",
-  iconSize: [24, 24],
-  iconAnchor: [12, 12]
+  html: "<span class=\"delivery-map-pin-dot\"></span>",
+  iconSize: [32, 42],
+  iconAnchor: [16, 39]
 });
 
 function MapClickHandler({ onPositionChange }) {
@@ -23,7 +23,7 @@ export default function DeliveryMap({ position, onPositionChange, interactive = 
       center={position}
       zoom={interactive ? 17 : 15}
       scrollWheelZoom={interactive}
-      className={`delivery-map ${className}`}
+      className={`delivery-map ${interactive ? "delivery-map-interactive" : ""} ${className}`}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
