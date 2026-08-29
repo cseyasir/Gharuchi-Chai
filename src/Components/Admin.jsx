@@ -443,6 +443,23 @@ const deleteCategory = async (categoryName) => {
     else fetchMenuItems();
   };
 
+  const toggleItemAvailability = async (id, currentAvailability) => {
+    console.log("Toggling availability for item", id, "from", currentAvailability, "to", !currentAvailability);
+    
+    const { data, error } = await supabase
+      .from("menu")
+      .update({ is_available: !currentAvailability })
+      .eq("id", id);
+
+    if (error) {
+      console.error("❌ Update failed:", error.message, error.code);
+      alert("Failed to update: " + error.message);
+    } else {
+      console.log("✅ Update successful");
+      fetchMenuItems();
+    }
+  };
+
   const addCategoryOption = () => {
     const trimmedName = newCategoryName.trim().toLowerCase();
     const trimmedIcon = newCategoryIcon.trim();
@@ -1562,6 +1579,9 @@ const deleteCategory = async (categoryName) => {
                                 <span className={`badge ms-2 ${item.is_active ? 'bg-success' : 'bg-secondary'}`}>
                                   {item.is_active ? 'Active' : 'Inactive'}
                                 </span>
+                                <span className={`badge ms-2 ${item.is_available ? 'bg-info' : 'bg-danger'}`}>
+                                  {item.is_available ? 'Available' : 'Out of Stock'}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -1576,9 +1596,24 @@ const deleteCategory = async (categoryName) => {
                             <button
                               className={`btn ${item.is_active ? 'btn-outline-warning' : 'btn-outline-success'}`}
                               onClick={() => toggleItemStatus(item.id, item.is_active)}
+                              title="Toggle Active/Inactive"
                             >
                               {item.is_active ? '🚫' : '✅'}
                             </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '0.875rem', minWidth: '80px' }}>
+                                {item.is_available ? 'Available' : 'Out of Stock'}
+                              </span>
+                              <div className="form-check form-switch">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  checked={item.is_available}
+                                  onChange={() => toggleItemAvailability(item.id, item.is_available)}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                              </div>
+                            </div>
                             <button
                               className="btn btn-outline-danger"
                               onClick={() => deleteMenuItem(item.id)}

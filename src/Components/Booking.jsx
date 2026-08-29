@@ -714,6 +714,7 @@ export default function Booking() {
       <div className="food-grid">
         {items.map(item => {
         const cartItem = cart.find(x => x.id === item.id);
+        const isOutOfStock = item.is_available === false;
 
         return (
           <div className="food-card" key={item.id}>
@@ -730,6 +731,9 @@ export default function Booking() {
                   <h6>{item.name}</h6>
                 </div>
                 <small>₹{item.price}</small>
+                {isOutOfStock && (
+                  <span style={{ color: '#dc3545', fontSize: '0.75rem', fontWeight: 'bold' }}>Out of Stock</span>
+                )}
               </div>
 
               {!cartItem ? (
@@ -737,8 +741,10 @@ export default function Booking() {
                   type="button"
                   className="add-main-btn"
                   onClick={() => addToCart(item)}
+                  disabled={isOutOfStock}
+                  style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
-                  ADD
+                  {isOutOfStock ? 'OUT' : 'ADD'}
                 </button>
               ) : (
                 <div className="qty-box">
