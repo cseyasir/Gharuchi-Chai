@@ -93,7 +93,7 @@ const deleteCategory = async (categoryName) => {
 
   // Menu CRUD Operations
   const fetchMenuItems = useCallback(async () => {
-    const { data, error } = await supabase
+    const {  error } = await supabase
       .from("menu")
       .select("*")
       .order("category", { ascending: true });
