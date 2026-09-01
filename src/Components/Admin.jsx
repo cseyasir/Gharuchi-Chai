@@ -93,7 +93,7 @@ const deleteCategory = async (categoryName) => {
 
   // Menu CRUD Operations
   const fetchMenuItems = useCallback(async () => {
-    const {  error } = await supabase
+    const { data, error } = await supabase
       .from("menu")
       .select("*")
       .order("category", { ascending: true });
@@ -446,7 +446,7 @@ const deleteCategory = async (categoryName) => {
   const toggleItemAvailability = async (id, currentAvailability) => {
     console.log("Toggling availability for item", id, "from", currentAvailability, "to", !currentAvailability);
     
-    const { data, error } = await supabase
+    const {  error } = await supabase
       .from("menu")
       .update({ is_available: !currentAvailability })
       .eq("id", id);
