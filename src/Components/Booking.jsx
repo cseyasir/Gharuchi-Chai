@@ -732,7 +732,7 @@ export default function Booking() {
                 </div>
                 <small>₹{item.price}</small>
                 {isOutOfStock && (
-                  <span style={{ color: '#dc3545', fontSize: '0.75rem', fontWeight: 'bold' }}>Out of Stock</span>
+                  <span style={{ color: '#dc3545', fontSize: '0.90rem', fontWeight: 'bold' }}>  Out of Stock</span>
                 )}
               </div>
 
