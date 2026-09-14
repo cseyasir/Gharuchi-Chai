@@ -395,6 +395,26 @@
   color: #7b7b7b;
 }
 
+.food-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recommended-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff1df;
+  color: #b85c00;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid #ffd49d;
+}
+
 .add-main-btn {
   min-width: 110px;
   border: 1px solid #ff8a00;

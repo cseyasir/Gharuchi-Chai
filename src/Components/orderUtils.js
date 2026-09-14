@@ -85,3 +85,34 @@ export const clearCartStorage = () => {
   if (typeof window === "undefined") return;
   localStorage.removeItem(CART_STORAGE_KEY);
 };
+
+export const getRecommendedItemName = (orders = [], fallbackItemName = null) => {
+  if (!Array.isArray(orders) || orders.length === 0) {
+    return fallbackItemName || null;
+  }
+
+  const itemTotals = {};
+
+  orders.forEach((order) => {
+    const items = Array.isArray(order?.order_items) ? order.order_items : [];
+
+    items.forEach((item) => {
+      const itemName = (item?.item_name || item?.name || "").trim();
+      if (!itemName) return;
+
+      const qty = Number(item?.qty ?? 1) || 1;
+      itemTotals[itemName] = (itemTotals[itemName] || 0) + qty;
+    });
+  });
+
+  if (Object.keys(itemTotals).length === 0) {
+    return fallbackItemName || null;
+  }
+
+  const [recommendedItemName] = Object.entries(itemTotals).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0].localeCompare(b[0]);
+  })[0];
+
+  return recommendedItemName || fallbackItemName || null;
+};

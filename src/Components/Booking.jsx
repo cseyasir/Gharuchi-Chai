@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { supabase } from "./supabaseClient";
-import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage, getNameFromStorage, getPhoneFromStorage, saveNameToStorage, savePhoneToStorage } from "./orderUtils";
+import { getOrCreateUserId, getCartFromStorage, saveCartToStorage, clearCartStorage, getNameFromStorage, getPhoneFromStorage, saveNameToStorage, savePhoneToStorage, getRecommendedItemName } from "./orderUtils";
 import AlertModal from "./AlertModal";
 import DeliveryMap from "./DeliveryMap";
 import "./Booking.css";
@@ -32,6 +32,7 @@ export default function Booking() {
   const [mapPosition, setMapPosition] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [bill, setBill] = useState(null);
+  const [recommendedItemName, setRecommendedItemName] = useState(null);
   const [shouldAutoReorder, setShouldAutoReorder] = useState(false);
   const [autoReorderStarted, setAutoReorderStarted] = useState(false);
   const [searchParams] = useSearchParams();
@@ -158,6 +159,39 @@ export default function Booking() {
     }
     fetchMenu();
   }, [fetchMenu, searchParams]);
+
+  useEffect(() => {
+    const fetchRecommendedItem = async () => {
+      const currentUserId = getOrCreateUserId();
+
+      const { data: userOrders, error: userOrdersError } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .eq("user_id", currentUserId);
+
+      if (userOrdersError) {
+        console.error("Recommended item lookup failed for user:", userOrdersError);
+      }
+
+      const personalRecommendation = getRecommendedItemName(userOrders || []);
+      if (personalRecommendation) {
+        setRecommendedItemName(personalRecommendation);
+        return;
+      }
+
+      const { data: allOrders, error: allOrdersError } = await supabase
+        .from("orders")
+        .select("*, order_items(*)");
+
+      if (allOrdersError) {
+        console.error("Global recommendation lookup failed:", allOrdersError);
+      }
+
+      setRecommendedItemName(getRecommendedItemName(allOrders || []));
+    };
+
+    fetchRecommendedItem();
+  }, []);
 
   useEffect(() => {
     const storedLocation = localStorage.getItem(CURRENT_LOCATION_STORAGE_KEY);
@@ -715,6 +749,7 @@ export default function Booking() {
         {items.map(item => {
         const cartItem = cart.find(x => x.id === item.id);
         const isOutOfStock = item.is_available === false;
+        const isRecommended = !!recommendedItemName && item.name === recommendedItemName;
 
         return (
           <div className="food-card" key={item.id}>
@@ -730,7 +765,10 @@ export default function Booking() {
                   )}
                   <h6>{item.name}</h6>
                 </div>
-                <small>₹{item.price}</small>
+                <div className="food-card-meta">
+                  <small className="fw-bold">₹{item.price}</small>
+                  {isRecommended && <span className="recommended-badge">Recommended</span>}
+                </div>
                 {isOutOfStock && (
                   <span style={{ color: '#dc3545', fontSize: '0.90rem', fontWeight: 'bold' }}>  Out of Stock</span>
                 )}
